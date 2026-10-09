@@ -1,0 +1,82 @@
+@api = http://localhost:3333/api/v1
+
+###
+# @name login
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@fcv.org.br",
+  "senha": "123456"
+}
+
+###
+@token = {{login.response.body.$.token}}
+
+###
+GET {{api}}/perfis
+Authorization: Bearer {{token}}
+
+###
+GET {{api}}/perfis/1
+Authorization: Bearer {{token}}
+
+###
+# @name novoPerfil
+POST {{api}}/perfis
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "FCV_ESTAGIARIO",
+  "escopo": "FCV",
+  "descricao": "Só consulta",
+  "permissoes": ["consultar"]
+}
+
+###
+PUT {{api}}/perfis/{{novoPerfil.response.body.$.id}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "INATIVO"
+}
+
+###
+DELETE {{api}}/perfis/{{novoPerfil.response.body.$.id}}
+Authorization: Bearer {{token}}
+
+###
+GET {{api}}/usuarios
+Authorization: Bearer {{token}}
+
+###
+GET {{api}}/usuarios/1
+Authorization: Bearer {{token}}
+
+###
+# @name novoUsuario
+POST {{api}}/usuarios
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "Gustavo Teste",
+  "email": "gustavo@fcv.org.br",
+  "senha": "123456",
+  "perfil_id": 3
+}
+
+###
+PUT {{api}}/usuarios/{{novoUsuario.response.body.$.id}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "Gustavo Silva"
+}
+
+###
+DELETE {{api}}/usuarios/{{novoUsuario.response.body.$.id}}
+Authorization: Bearer {{token}}
