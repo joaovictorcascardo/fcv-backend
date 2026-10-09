@@ -49,3 +49,49 @@ GET {{api}}/auth/eu
 ###
 GET {{api}}/auth/eu
 Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJpZCI6MX0.assinaturafalsa
+
+###
+# @name esqueci
+POST {{api}}/auth/esqueci-senha
+Content-Type: application/json
+
+{
+  "email": "carla@fcv.org.br"
+}
+
+###
+POST {{api}}/auth/esqueci-senha
+Content-Type: application/json
+
+{
+  "email": "naoexiste@fcv.org.br"
+}
+
+###
+POST {{api}}/auth/redefinir-senha
+Content-Type: application/json
+
+{
+  "email": "carla@fcv.org.br",
+  "codigo": "000000",
+  "nova_senha": "nova123"
+}
+
+###
+POST {{api}}/auth/redefinir-senha
+Content-Type: application/json
+
+{
+  "email": "carla@fcv.org.br",
+  "codigo": "{{esqueci.response.body.$.codigo}}",
+  "nova_senha": "nova123"
+}
+
+###
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "carla@fcv.org.br",
+  "senha": "nova123"
+}
