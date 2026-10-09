@@ -1,0 +1,51 @@
+@api = http://localhost:3333/api/v1
+
+###
+# @name login
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@fcv.org.br",
+  "senha": "123456"
+}
+
+###
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@fcv.org.br",
+  "senha": "errada"
+}
+
+###
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "fabio@fcv.org.br",
+  "senha": "123456"
+}
+
+###
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@fcv.org.br"
+}
+
+###
+@token = {{login.response.body.$.token}}
+
+###
+GET {{api}}/auth/eu
+Authorization: Bearer {{token}}
+
+###
+GET {{api}}/auth/eu
+
+###
+GET {{api}}/auth/eu
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJpZCI6MX0.assinaturafalsa
