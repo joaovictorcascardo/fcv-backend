@@ -111,4 +111,62 @@ export const authController = {
       .update({ usado: true });
     res.json({ mensagem: "Senha alterada" });
   },
+  async registrar(req: Request, res: Response) {
+    const {
+      nome,
+      email,
+      senha,
+      matricula,
+      setor,
+      cargo,
+      data_admissao,
+      telefone,
+    } = req.body ?? {};
+    if (
+      !nome ||
+      !email ||
+      !senha ||
+      !matricula ||
+      !setor ||
+      !cargo ||
+      !data_admissao
+    ) {
+      res.status(400).json({
+        erro: "Informe nome, e-mail, senha, matrícula, setor, cargo e data de admissão",
+      });
+      return;
+    }
+
+    const perfil = await db("perfil_acesso")
+      .where({ escopo: "COLABORADOR" })
+      .first();
+    const senhaCriptografada = await bcrypt.hash(String(senha), 10);
+    const usuarioId = await db.transaction(async (trx) => {
+      const [id] = await trx("usuario").insert({
+        nome,
+        email,
+        senha: senhaCriptografada,
+        perfil_id: perfil.id,
+        status: "INATIVO",
+      });
+      await trx("colaborador").insert({
+        usuario_id: id,
+        matricula,
+        setor,
+        cargo,
+        data_admissao,
+        telefone,
+      });
+      return id;
+    });
+
+    const usuario = await buscarUsuarioComPerfil()
+      .where("usuario.id", usuarioId)
+      .first();
+    delete usuario.senha;
+    res.status(201).json({
+      mensagem: "Cadastro enviado. Aguarde a FCV liberar o acesso",
+      usuario,
+    });
+  },
 };
