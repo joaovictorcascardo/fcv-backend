@@ -1,0 +1,77 @@
+@api = http://localhost:3333/api/v1
+
+###
+# @name login
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@fcv.org.br",
+  "senha": "123456"
+}
+
+###
+@token = {{login.response.body.$.token}}
+
+###
+GET {{api}}/utilizacoes
+Authorization: Bearer {{token}}
+
+###
+GET {{api}}/utilizacoes/1
+Authorization: Bearer {{token}}
+
+###
+# @name novaUtilizacao
+POST {{api}}/utilizacoes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "colaborador_id": 1,
+  "beneficio_conveniado_id": 1,
+  "valor_aplicado": 25
+}
+
+###
+PUT {{api}}/utilizacoes/{{novaUtilizacao.response.body.$.id}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "APROVADA",
+  "canal_validacao": "APP_CONVENIADO",
+  "data_confirmacao": "2026-10-05 14:30:00"
+}
+
+###
+# @name utilizacaoCampanha
+POST {{api}}/utilizacoes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "colaborador_id": 2,
+  "beneficio_campanha_conveniado_id": 1,
+  "valor_aplicado": 80
+}
+
+###
+POST {{api}}/utilizacoes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "colaborador_id": 1,
+  "beneficio_conveniado_id": 1,
+  "beneficio_campanha_conveniado_id": 1,
+  "valor_aplicado": 10
+}
+
+###
+DELETE {{api}}/utilizacoes/{{novaUtilizacao.response.body.$.id}}
+Authorization: Bearer {{token}}
+
+###
+DELETE {{api}}/utilizacoes/{{utilizacaoCampanha.response.body.$.id}}
+Authorization: Bearer {{token}}
