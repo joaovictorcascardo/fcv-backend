@@ -95,3 +95,70 @@ Content-Type: application/json
   "email": "carla@fcv.org.br",
   "senha": "nova123"
 }
+
+###
+# @name registro
+POST {{api}}/auth/registrar
+Content-Type: application/json
+
+{
+  "nome": "Renata Alves",
+  "email": "renata@fcv.org.br",
+  "senha": "123456",
+  "matricula": "FCV0200",
+  "setor": "Enfermagem",
+  "cargo": "Técnico de Enfermagem",
+  "data_admissao": "2026-10-01",
+  "telefone": "32999990000"
+}
+
+###
+POST {{api}}/auth/registrar
+Content-Type: application/json
+
+{
+  "nome": "Renata Alves",
+  "email": "renata@fcv.org.br",
+  "senha": "123456"
+}
+
+###
+POST {{api}}/auth/registrar
+Content-Type: application/json
+
+{
+  "nome": "Paulo Mendes",
+  "email": "paulo@fcv.org.br",
+  "senha": "123456",
+  "matricula": "FCV0200",
+  "setor": "Recepção",
+  "cargo": "Recepcionista",
+  "data_admissao": "2026-10-01"
+}
+
+###
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "renata@fcv.org.br",
+  "senha": "123456"
+}
+
+###
+PUT {{api}}/usuarios/{{registro.response.body.$.usuario.id}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "ATIVO"
+}
+
+###
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "renata@fcv.org.br",
+  "senha": "123456"
+}
