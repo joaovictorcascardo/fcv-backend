@@ -431,6 +431,134 @@ export const documentacao = {
         },
       },
     },
+    "/auth/registrar": {
+      post: {
+        tags: ["Autenticação"],
+        summary: "Colaborador cria a própria conta",
+        description:
+          "Cria o usuário (perfil de colaborador) e os dados de colaborador. A conta nasce INATIVO: o login só funciona depois que a FCV liberar com PUT /usuarios/{id} enviando status ATIVO.",
+        security: [],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["nome", "email", "senha", "matricula", "setor", "cargo", "data_admissao"],
+                properties: {
+                  nome: texto(150),
+                  email: { type: "string", format: "email", maxLength: 150 },
+                  senha: textoLivre,
+                  matricula: texto(30),
+                  setor: texto(100),
+                  cargo: texto(100),
+                  data_admissao: data,
+                  telefone: opcional(texto(20)),
+                },
+              },
+              example: {
+                nome: "Renata Alves",
+                email: "renata@fcv.org.br",
+                senha: "123456",
+                matricula: "FCV0200",
+                setor: "Enfermagem",
+                cargo: "Técnica de Enfermagem",
+                data_admissao: "2026-10-01",
+                telefone: "32999990000",
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: "Cadastro criado, aguardando liberação",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    mensagem: { type: "string", example: "Cadastro enviado. Aguarde a FCV liberar o acesso" },
+                    usuario: { $ref: "#/components/schemas/UsuarioLogado" },
+                  },
+                },
+              },
+            },
+          },
+          400: {
+            description: "Faltou campo obrigatório",
+            ...erro("Informe nome, e-mail, senha, matrícula, setor, cargo e data de admissão"),
+          },
+          409: { description: "E-mail ou matrícula já cadastrados", ...erro("Já existe um registro com esse valor (campo único repetido)") },
+        },
+      },
+    },
+    "/auth/esqueci-senha": {
+      post: {
+        tags: ["Autenticação"],
+        summary: "Gera um código para trocar a senha",
+        description:
+          "Gera um código de 6 dígitos que vale 15 minutos. Ainda não há envio por e-mail: o código volta na resposta. Use-o em POST /auth/redefinir-senha.",
+        security: [],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { type: "object", required: ["email"], properties: { email: textoLivre } },
+              example: { email: "carla@fcv.org.br" },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "Código gerado",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    mensagem: { type: "string", example: "Código gerado. Ele vale 15 minutos" },
+                    codigo: { type: "string", example: "482913" },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: "E-mail não enviado", ...erro("Informe o e-mail") },
+          404: { description: "E-mail não cadastrado", ...erro("E-mail não encontrado") },
+        },
+      },
+    },
+    "/auth/redefinir-senha": {
+      post: {
+        tags: ["Autenticação"],
+        summary: "Troca a senha usando o código",
+        security: [],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["email", "codigo", "nova_senha"],
+                properties: { email: textoLivre, codigo: textoLivre, nova_senha: textoLivre },
+              },
+              example: { email: "carla@fcv.org.br", codigo: "482913", nova_senha: "nova123" },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "Senha alterada",
+            content: {
+              "application/json": {
+                schema: { type: "object", properties: { mensagem: { type: "string", example: "Senha alterada" } } },
+              },
+            },
+          },
+          400: { description: "Campos faltando ou código errado, expirado ou já usado", ...erro("Código inválido ou expirado") },
+        },
+      },
+    },
     ...Object.assign({}, ...recursos.map(crud)),
   },
   components: {

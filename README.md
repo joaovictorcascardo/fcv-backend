@@ -93,6 +93,8 @@ Resumo das rotas (todas começam com `/api/v1`):
 | Rota | Quem pode usar | O que guarda |
 | --- | --- | --- |
 | `/auth/login` e `/auth/eu` | Qualquer pessoa / usuário logado | Login e dados de quem está logado |
+| `/auth/registrar` | Qualquer pessoa | Colaborador cria a própria conta (nasce inativa até a FCV liberar) |
+| `/auth/esqueci-senha` e `/auth/redefinir-senha` | Qualquer pessoa | Gera um código de 6 dígitos e troca a senha com ele |
 | `/perfis` | Escopo FCV | Perfis de acesso |
 | `/usuarios` | Escopo FCV | Contas de acesso (a senha é criptografada) |
 | `/colaboradores` | Usuário logado | Dados de RH do colaborador |
@@ -133,6 +135,10 @@ A API usa **JWT**. Funciona como a pulseira de um evento: você mostra o documen
 5. O token vale **8 horas**. Quando vencer, a API responde `401` e o front volta para o login.
 
 Para sair, basta o front apagar o token. Ao abrir o app ou o portal com um token já guardado, chame `GET /api/v1/auth/eu`: se vier `200`, o usuário continua logado; se vier `401`, mande para o login.
+
+**Criar conta (colaborador):** a tela de cadastro envia nome, e-mail, senha, matrícula, setor, cargo e data de admissão para `POST /api/v1/auth/registrar`. A conta nasce `INATIVO`, então o login responde `403` até a FCV liberar pelo portal (`PUT /api/v1/usuarios/:id` com `"status": "ATIVO"`).
+
+**Esqueci minha senha:** `POST /api/v1/auth/esqueci-senha` com o `email` gera um código de 6 dígitos que vale 15 minutos. Ainda não há envio por e-mail: o código volta na resposta. A tela seguinte envia `email`, `codigo` e `nova_senha` para `POST /api/v1/auth/redefinir-senha`.
 
 **Qual tela abrir depois do login**, pelo campo `usuario.escopo`:
 
