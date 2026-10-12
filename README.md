@@ -270,7 +270,20 @@ Todas começam com `/api/v1`.
 | `PUT` | `/usuarios/:id` | Escopo FCV | Altera um usuário |
 | `DELETE` | `/usuarios/:id` | Escopo FCV | Exclui um usuário |
 
-As demais tabelas (colaboradores, conveniados, benefícios, campanhas e utilizações) estão sendo implementadas e entram nesta lista quando chegarem à `main`.
+As demais rotas seguem o mesmo padrão de cinco operações: `GET /rota` lista, `GET /rota/:id` mostra um, `POST /rota` cria, `PUT /rota/:id` altera e `DELETE /rota/:id` exclui. Todas pedem um usuário logado.
+
+| Rota | Tabela | O que guarda |
+| --- | --- | --- |
+| `/colaboradores` | `colaborador` | Dados de RH do colaborador (matrícula, setor, cargo, admissão) |
+| `/conveniados` | `conveniado` | Estabelecimentos parceiros (CNPJ, categoria, endereço) |
+| `/beneficios` | `beneficio` | Benefícios permanentes e suas regras de uso |
+| `/ofertas` | `beneficio_conveniado` | Qual conveniado oferece qual benefício |
+| `/campanhas` | `campanha_evento` | Campanhas e eventos com período definido |
+| `/itens-campanha` | `beneficio_campanha` | Benefícios que fazem parte de uma campanha |
+| `/ofertas-campanha` | `beneficio_campanha_conveniado` | Qual conveniado oferece qual item de campanha |
+| `/utilizacoes` | `utilizacao` | Cada uso de um benefício, com token do QR Code e status |
+
+Na utilização, informe **um** entre `beneficio_conveniado_id` e `beneficio_campanha_conveniado_id`, nunca os dois. Se o `token_qrcode` não for enviado, a API gera um automaticamente.
 
 ### Exemplo: criar um usuário
 
