@@ -11,6 +11,7 @@ import colaboradorRoutes from "./colaboradorRoutes";
 import conveniadoRoutes from "./conveniadoRoutes";
 import campanhaEventoRoutes from "./campanhaEventoRoutes";
 import beneficioCampanhaRoutes from "./beneficioCampanhaRoutes";
+import utilizacaoRoutes from "./utilizacaoRoutes";
 
 const rotas = Router();
 rotas.use("/auth", authRoutes);
@@ -23,4 +24,5 @@ rotas.use("/colaboradores", autenticar, colaboradorRoutes);
 rotas.use("/conveniados", autenticar, conveniadoRoutes);
 rotas.use("/campanhas", autenticar, campanhaEventoRoutes);
 rotas.use("/itens-campanha", autenticar, beneficioCampanhaRoutes);
+rotas.use("/utilizacoes", autenticar, utilizacaoRoutes);
 export default rotas;
