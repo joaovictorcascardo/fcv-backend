@@ -1,4 +1,3 @@
-
 @api = http://localhost:3333/api/v1
 
 ###
@@ -46,3 +45,39 @@ Content-Type: application/json
 {
   "valor": 25
 }
+
+###
+GET {{api}}/ofertas
+Authorization: Bearer {{token}}
+
+###
+GET {{api}}/ofertas/1
+Authorization: Bearer {{token}}
+
+###
+# @name novaOferta
+POST {{api}}/ofertas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "beneficio_id": {{novoBeneficio.response.body.$.id}},
+  "conveniado_id": 2
+}
+
+###
+PUT {{api}}/ofertas/{{novaOferta.response.body.$.id}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "INATIVO"
+}
+
+###
+DELETE {{api}}/ofertas/{{novaOferta.response.body.$.id}}
+Authorization: Bearer {{token}}
+
+###
+DELETE {{api}}/beneficios/{{novoBeneficio.response.body.$.id}}
+Authorization: Bearer {{token}}
