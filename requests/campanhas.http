@@ -1,0 +1,85 @@
+@api = http://localhost:3333/api/v1
+
+###
+# @name login
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@fcv.org.br",
+  "senha": "123456"
+}
+
+###
+@token = {{login.response.body.$.token}}
+
+###
+GET {{api}}/campanhas
+Authorization: Bearer {{token}}
+
+###
+GET {{api}}/campanhas/1
+Authorization: Bearer {{token}}
+
+###
+# @name novaCampanha
+POST {{api}}/campanhas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "Novembro Azul",
+  "tipo": "CAMPANHA",
+  "descricao": "Mês de cuidado com a saúde do homem",
+  "data_inicio": "2026-11-01",
+  "data_fim": "2026-11-30",
+  "criterio_elegibilidade": "Todos os colaboradores ativos"
+}
+
+###
+PUT {{api}}/campanhas/{{novaCampanha.response.body.$.id}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "ATIVA"
+}
+
+###
+GET {{api}}/itens-campanha
+Authorization: Bearer {{token}}
+
+###
+GET {{api}}/itens-campanha/1
+Authorization: Bearer {{token}}
+
+###
+# @name novoItem
+POST {{api}}/itens-campanha
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "campanha_id": {{novaCampanha.response.body.$.id}},
+  "nome": "Check-up com desconto",
+  "tipo_beneficio": "PERCENTUAL",
+  "valor": 30,
+  "quantidade_maxima_utilizacoes": 1
+}
+
+###
+PUT {{api}}/itens-campanha/{{novoItem.response.body.$.id}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "valor": 35
+}
+
+###
+DELETE {{api}}/itens-campanha/{{novoItem.response.body.$.id}}
+Authorization: Bearer {{token}}
+
+###
+DELETE {{api}}/campanhas/{{novaCampanha.response.body.$.id}}
+Authorization: Bearer {{token}}
