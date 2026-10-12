@@ -7,6 +7,8 @@ import { autenticar } from "../middlewares/autenticar";
 import { permitir } from "../middlewares/permitir";
 import perfilAcessoRoutes from "./perfilAcessoRoutes";
 import usuarioRoutes from "./usuarioRoutes";
+import colaboradorRoutes from "./colaboradorRoutes";
+import conveniadoRoutes from "./conveniadoRoutes";
 
 const rotas = Router();
 rotas.use("/auth", authRoutes);
@@ -15,4 +17,6 @@ rotas.use("/ofertas", autenticar, beneficioConveniadoRoutes);
 rotas.use("/ofertas-campanha", autenticar, beneficioCampanhaConveniadoRoutes);
 rotas.use("/perfis", autenticar, permitir("FCV"), perfilAcessoRoutes);
 rotas.use("/usuarios", autenticar, permitir("FCV"), usuarioRoutes);
+rotas.use("/colaboradores", autenticar, colaboradorRoutes);
+rotas.use("/conveniados", autenticar, conveniadoRoutes);
 export default rotas;
