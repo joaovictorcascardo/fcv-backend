@@ -255,6 +255,15 @@ Na tela de login, a mensagem de `error.message` pode ser mostrada direto para o 
 
 Todas começam com `/api/v1`.
 
+Com a API rodando, a documentação completa fica em **http://localhost:3333/api/v1/docs**. Lá aparecem todas as rotas com os campos de cada uma (quais são obrigatórios, tamanhos e valores aceitos), exemplos prontos e as respostas possíveis. Dá para testar direto pelo navegador:
+
+1. Abra `POST /auth/login`, clique em **Try it out** e depois em **Execute**.
+2. Copie o `token` da resposta.
+3. Clique em **Authorize** no topo da página, cole o token e confirme.
+4. Agora qualquer rota funciona com **Try it out** → **Execute**.
+
+Ao criar ou mudar uma rota, atualize também o arquivo `src/docs/swagger.ts`.
+
 | Método | Rota | Quem pode usar | O que faz |
 | --- | --- | --- | --- |
 | `POST` | `/auth/login` | Qualquer pessoa | Faz login e devolve o token |
@@ -364,6 +373,8 @@ src/
     db.ts                conexão com o banco
     migrations/          criação das tabelas, em ordem numérica
     seeds/               dados de teste
+  docs/
+    swagger.ts           documentação das rotas exibida em /api/v1/docs
 requests/                requisições prontas para testar no VS Code
 ```
 
