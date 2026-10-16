@@ -51,7 +51,8 @@ function crud({ caminho, tag, nome, schema, exemplo, naoEncontrado: mensagem, so
   const ref = { $ref: `#/components/schemas/${schema}` };
   const refEntrada = { $ref: `#/components/schemas/${schema}Entrada` };
   const refAlteracao = { $ref: `#/components/schemas/${schema}Alteracao` };
-  const respostas = soFcv ? respostasFcv : respostasComuns;
+  const leitura = soFcv ? respostasFcv : respostasComuns;
+  const escrita = respostasFcv;
   const naoEncontrado = { description: "Não existe registro com esse id", ...erro(mensagem) };
   const corpo = (exigirObrigatorios: boolean) => ({
     required: true,
@@ -71,7 +72,7 @@ function crud({ caminho, tag, nome, schema, exemplo, naoEncontrado: mensagem, so
       get: {
         tags: [tag],
         summary: `Lista ${tag.toLowerCase()}`,
-        responses: { 200: { description: "Lista de registros", ...json({ type: "array", items: ref }) }, ...respostas },
+        responses: { 200: { description: "Lista de registros", ...json({ type: "array", items: ref }) }, ...leitura },
       },
       post: {
         tags: [tag],
@@ -82,7 +83,7 @@ function crud({ caminho, tag, nome, schema, exemplo, naoEncontrado: mensagem, so
           201: { description: "Registro criado", ...json(ref) },
           400: { description: "Campo faltando, inválido ou id de referência inexistente", ...erro("Faltou enviar um campo obrigatório") },
           409: { description: "Valor único repetido", ...erro("Já existe um registro com esse valor (campo único repetido)") },
-          ...respostas,
+          ...escrita,
         },
       },
     },
@@ -91,7 +92,7 @@ function crud({ caminho, tag, nome, schema, exemplo, naoEncontrado: mensagem, so
       get: {
         tags: [tag],
         summary: `Mostra ${nome.toLowerCase()}`,
-        responses: { 200: { description: "Registro encontrado", ...json(ref) }, 404: naoEncontrado, ...respostas },
+        responses: { 200: { description: "Registro encontrado", ...json(ref) }, 404: naoEncontrado, ...leitura },
       },
       put: {
         tags: [tag],
@@ -102,7 +103,7 @@ function crud({ caminho, tag, nome, schema, exemplo, naoEncontrado: mensagem, so
           200: { description: "Registro atualizado", ...json(ref) },
           400: { description: "Nenhum campo enviado ou valor inválido", ...erro("Nenhum campo enviado para atualizar") },
           404: naoEncontrado,
-          ...respostas,
+          ...escrita,
         },
       },
       delete: {
@@ -112,7 +113,7 @@ function crud({ caminho, tag, nome, schema, exemplo, naoEncontrado: mensagem, so
           204: { description: "Registro excluído" },
           404: naoEncontrado,
           409: { description: "Há registros ligados a este", ...erro("Não é possível excluir: há outros registros ligados a este") },
-          ...respostas,
+          ...escrita,
         },
       },
     },
@@ -304,6 +305,7 @@ const recursos: Recurso[] = [
     tag: "Colaboradores",
     nome: "Colaborador",
     schema: "Colaborador",
+    soFcv: true,
     observacao: "Crie antes o usuário (POST /usuarios com perfil de colaborador) e use o id dele em usuario_id.",
     exemplo: { usuario_id: 9, matricula: "FCV0100", setor: "Farmácia hospitalar", cargo: "Farmacêutica", data_admissao: "2026-09-01", telefone: "32988887777" },
   },
@@ -365,6 +367,7 @@ const recursos: Recurso[] = [
     tag: "Utilizações",
     nome: "Utilização",
     schema: "Utilizacao",
+    soFcv: true,
     observacao: "Informe um entre beneficio_conveniado_id e beneficio_campanha_conveniado_id, nunca os dois. Se token_qrcode não for enviado, a API gera um.",
     exemplo: { colaborador_id: 1, beneficio_conveniado_id: 1, valor_aplicado: 25 },
   },
