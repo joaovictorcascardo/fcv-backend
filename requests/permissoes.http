@@ -1,0 +1,79 @@
+@api = http://localhost:3333/api/v1
+
+###
+# @name loginColaborador
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "diego@fcv.org.br",
+  "senha": "123456"
+}
+
+###
+@tokenColaborador = {{loginColaborador.response.body.$.token}}
+
+###
+# @name loginConveniado
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "farmacia@parceiro.com",
+  "senha": "123456"
+}
+
+###
+@tokenConveniado = {{loginConveniado.response.body.$.token}}
+
+###
+GET {{api}}/beneficios
+Authorization: Bearer {{tokenColaborador}}
+
+###
+GET {{api}}/conveniados/1
+Authorization: Bearer {{tokenColaborador}}
+
+###
+GET {{api}}/campanhas
+Authorization: Bearer {{tokenConveniado}}
+
+###
+POST {{api}}/beneficios
+Authorization: Bearer {{tokenColaborador}}
+Content-Type: application/json
+
+{
+  "nome": "Ingresso de cinema",
+  "tipo_beneficio": "VALOR_FIXO",
+  "valor": 20
+}
+
+###
+PUT {{api}}/conveniados/1
+Authorization: Bearer {{tokenConveniado}}
+Content-Type: application/json
+
+{
+  "status": "ATIVO"
+}
+
+###
+DELETE {{api}}/ofertas/1
+Authorization: Bearer {{tokenConveniado}}
+
+###
+DELETE {{api}}/itens-campanha/1
+Authorization: Bearer {{tokenColaborador}}
+
+###
+GET {{api}}/colaboradores
+Authorization: Bearer {{tokenColaborador}}
+
+###
+GET {{api}}/utilizacoes
+Authorization: Bearer {{tokenConveniado}}
+
+###
+GET {{api}}/usuarios
+Authorization: Bearer {{tokenColaborador}}
