@@ -97,14 +97,14 @@ Resumo das rotas (todas começam com `/api/v1`):
 | `/auth/esqueci-senha` e `/auth/redefinir-senha` | Qualquer pessoa | Gera um código de 6 dígitos e troca a senha com ele |
 | `/perfis` | Escopo FCV | Perfis de acesso |
 | `/usuarios` | Escopo FCV | Contas de acesso (a senha é criptografada) |
-| `/colaboradores` | Usuário logado | Dados de RH do colaborador |
-| `/conveniados` | Usuário logado | Estabelecimentos parceiros |
-| `/beneficios` | Usuário logado | Benefícios permanentes e suas regras de uso |
-| `/ofertas` | Usuário logado | Qual conveniado oferece qual benefício |
-| `/campanhas` | Usuário logado | Campanhas e eventos com período definido |
-| `/itens-campanha` | Usuário logado | Benefícios que fazem parte de uma campanha |
-| `/ofertas-campanha` | Usuário logado | Qual conveniado oferece qual item de campanha |
-| `/utilizacoes` | Usuário logado | Cada uso de um benefício, com token do QR Code e status |
+| `/colaboradores` | Escopo FCV | Dados de RH do colaborador |
+| `/conveniados` | Ver: usuário logado. Criar, alterar e excluir: escopo FCV | Estabelecimentos parceiros |
+| `/beneficios` | Ver: usuário logado. Criar, alterar e excluir: escopo FCV | Benefícios permanentes e suas regras de uso |
+| `/ofertas` | Ver: usuário logado. Criar, alterar e excluir: escopo FCV | Qual conveniado oferece qual benefício |
+| `/campanhas` | Ver: usuário logado. Criar, alterar e excluir: escopo FCV | Campanhas e eventos com período definido |
+| `/itens-campanha` | Ver: usuário logado. Criar, alterar e excluir: escopo FCV | Benefícios que fazem parte de uma campanha |
+| `/ofertas-campanha` | Ver: usuário logado. Criar, alterar e excluir: escopo FCV | Qual conveniado oferece qual item de campanha |
+| `/utilizacoes` | Escopo FCV | Cada uso de um benefício, com token do QR Code e status |
 
 Fora o `/auth`, todas têm as cinco operações: `GET /rota` lista, `GET /rota/:id` mostra um, `POST /rota` cria, `PUT /rota/:id` altera (envie só os campos que mudaram) e `DELETE /rota/:id` exclui.
 
@@ -202,7 +202,7 @@ Todo erro volta no mesmo formato:
 | --- | --- | --- |
 | `400` | Dados inválidos | Campo obrigatório vazio, JSON mal formatado |
 | `401` | Não está logado | Token ausente, inválido ou vencido |
-| `403` | Sem permissão | Colaborador acessando `/usuarios`, usuário inativo no login |
+| `403` | Sem permissão | Colaborador acessando `/usuarios` ou criando um benefício, usuário inativo no login |
 | `404` | Não encontrado | Rota ou registro inexistente |
 | `409` | Conflito | E-mail já cadastrado, exclusão de registro ligado a outros |
 | `500` | Erro interno | O detalhe aparece no terminal da API |
