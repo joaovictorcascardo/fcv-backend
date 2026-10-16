@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { permitir } from "../middlewares/permitir";
 import { beneficioConveniadoController } from "../controllers/beneficioConveniadoController";
 
 const router = Router();
@@ -7,10 +8,10 @@ router.get("/", beneficioConveniadoController.listar);
 
 router.get("/:id", beneficioConveniadoController.buscar);
 
-router.post("/", beneficioConveniadoController.criar);
+router.post("/", permitir("FCV"), beneficioConveniadoController.criar);
 
-router.put("/:id", beneficioConveniadoController.atualizar);
+router.put("/:id", permitir("FCV"), beneficioConveniadoController.atualizar);
 
-router.delete("/:id", beneficioConveniadoController.excluir);
+router.delete("/:id", permitir("FCV"), beneficioConveniadoController.excluir);
 
 export default router;
