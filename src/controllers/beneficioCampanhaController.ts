@@ -3,7 +3,7 @@ import { beneficioCampanhaModel } from "../models/beneficioCampanhaModel";
 
 export const beneficioCampanhaController = {
   async listar(req: Request, res: Response) {
-    const lista = await beneficioCampanhaModel.listar();
+    const lista = await beneficioCampanhaModel.listar(req.query);
     res.json(lista);
   },
 

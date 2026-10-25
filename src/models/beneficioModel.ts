@@ -1,11 +1,12 @@
 
 import db from "../database/db";
+import { listarRecurso } from "../queries/recursos";
 
 const TABELA = "beneficio";
 
 export const beneficioModel = {
-  listar() {
-    return db(TABELA).select("*");
+  listar(consulta: unknown = {}) {
+    return listarRecurso(db, "beneficios", consulta);
   },
 
   buscarPorId(id: number) {

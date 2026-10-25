@@ -3,7 +3,7 @@ import { perfilAcessoModel } from "../models/perfilAcessoModel";
 
 export const perfilAcessoController = {
   async listar(req: Request, res: Response) {
-    const lista = await perfilAcessoModel.listar();
+    const lista = await perfilAcessoModel.listar(req.query);
     res.json(lista);
   },
 

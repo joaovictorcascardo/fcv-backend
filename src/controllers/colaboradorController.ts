@@ -3,7 +3,7 @@ import { colaboradorModel } from "../models/colaboradorModel";
 
 export const colaboradorController = {
   async listar(req: Request, res: Response) {
-    const lista = await colaboradorModel.listar();
+    const lista = await colaboradorModel.listar(req.query);
     res.json(lista);
   },
 

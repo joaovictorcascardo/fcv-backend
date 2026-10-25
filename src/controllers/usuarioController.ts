@@ -3,7 +3,7 @@ import { usuarioModel } from "../models/usuarioModel";
 
 export const usuarioController = {
   async listar(req: Request, res: Response) {
-    const lista = await usuarioModel.listar();
+    const lista = await usuarioModel.listar(req.query);
     res.json(lista);
   },
 

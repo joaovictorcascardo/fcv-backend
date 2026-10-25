@@ -1,4 +1,5 @@
 import db from "../database/db";
+import { listarRecurso } from "../queries/recursos";
 
 const TABELA = "perfil_acesso";
 
@@ -10,8 +11,8 @@ function prepararPermissoes(dados: any) {
 }
 
 export const perfilAcessoModel = {
-  listar() {
-    return db(TABELA).select("*");
+  listar(consulta: unknown = {}) {
+    return listarRecurso(db, "perfis", consulta);
   },
 
   buscarPorId(id: number) {

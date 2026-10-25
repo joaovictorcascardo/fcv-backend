@@ -1,12 +1,13 @@
 import bcrypt from "bcryptjs";
 import db from "../database/db";
+import { listarRecurso } from "../queries/recursos";
 
 const TABELA = "usuario";
 const COLUNAS = ["id", "nome", "email", "perfil_id", "status", "data_criacao"];
 
 export const usuarioModel = {
-  listar() {
-    return db(TABELA).select(COLUNAS);
+  listar(consulta: unknown = {}) {
+    return listarRecurso(db, "usuarios", consulta);
   },
 
   buscarPorId(id: number) {

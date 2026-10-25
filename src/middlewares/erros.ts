@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import { ConsultaInvalida } from "../queries/listagem";
 
 const errosConhecidos: Record<string, [number, string]> = {
   ER_DUP_ENTRY: [
@@ -34,6 +35,10 @@ export function tratarErros(
   res: Response,
   next: NextFunction,
 ) {
+  if (erro instanceof ConsultaInvalida) {
+    res.status(400).json({ erro: erro.message });
+    return;
+  }
   const conhecido = errosConhecidos[erro.code];
   if (conhecido) {
     res

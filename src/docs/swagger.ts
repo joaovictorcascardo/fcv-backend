@@ -1,3 +1,6 @@
+import { recursosListagem, type NomeRecursoListagem } from "../queries/recursos";
+import type { ConfiguracaoListagem } from "../queries/listagem";
+
 const texto = (maxLength: number) => ({ type: "string", maxLength });
 const textoLivre = { type: "string" };
 const inteiro = { type: "integer" };
@@ -47,6 +50,26 @@ type Recurso = {
   observacao?: string;
 };
 
+function parametrosListagem(caminho: string) {
+  const config: ConfiguracaoListagem & { periodo?: string } = recursosListagem[caminho.slice(1) as NomeRecursoListagem];
+  const parametro = (name: string, description: string, schema: object) => ({ name, in: "query", required: false, description, schema });
+  return [
+    parametro("pagina", "Ativa o formato paginado. Inteiro positivo; padrão 1 quando pagina ou limite é enviado.", { type: "integer", minimum: 1 }),
+    parametro("limite", "Ativa o formato paginado. Entre 1 e 100; padrão 20 quando pagina ou limite é enviado.", { type: "integer", minimum: 1, maximum: 100 }),
+    parametro("ordenarPor", "Campo permitido; id é usado como desempate. Não aceita expressão SQL.", { type: "string", enum: Object.keys(config.ordenarPor), default: "id" }),
+    parametro("ordem", "Sentido da ordenação principal. Desempate por id crescente.", { type: "string", enum: ["asc", "desc"], default: "asc" }),
+    ...(config.busca?.length ? [parametro("busca", "Substring literal nos campos textuais permitidos. % e _ são literais.", { type: "string", minLength: 1, maxLength: 150 })] : []),
+    ...Object.entries(config.filtros ?? {}).map(([nome, filtro]) => parametro(
+      nome,
+      filtro.tipo === "data" ? config.periodo ?? "Dia no formato YYYY-MM-DD; intervalo inclusivo." : "Filtro de igualdade, combinado por AND com os demais filtros.",
+      filtro.tipo === "inteiro" ? { type: "integer", minimum: 1, maximum: Number.MAX_SAFE_INTEGER }
+        : filtro.tipo === "enum" ? { type: "string", enum: [...(filtro.valores ?? [])] }
+        : filtro.tipo === "data" ? { type: "string", format: "date" }
+        : { type: "string", minLength: 1, maxLength: 150 },
+    )),
+  ];
+}
+
 function crud({ caminho, tag, nome, schema, exemplo, naoEncontrado: mensagem, soFcv, observacao }: Recurso) {
   const ref = { $ref: `#/components/schemas/${schema}` };
   const refEntrada = { $ref: `#/components/schemas/${schema}Entrada` };
@@ -72,7 +95,22 @@ function crud({ caminho, tag, nome, schema, exemplo, naoEncontrado: mensagem, so
       get: {
         tags: [tag],
         summary: `Lista ${tag.toLowerCase()}`,
-        responses: { 200: { description: "Lista de registros", ...json({ type: "array", items: ref }) }, ...leitura },
+        description: "Sem pagina e limite: array completo, inclusive com filtros. Enviar pagina ou limite ativa o envelope paginado. Parâmetros devem ser únicos; desconhecidos, vazios, tipos/enums/datas inválidos e intervalos invertidos geram 400. Total usa os mesmos filtros e escopo dos dados. Página além do fim retorna dados vazio com o total real.",
+        parameters: parametrosListagem(caminho),
+        responses: {
+          200: {
+            description: "Array legado ou envelope quando pagina/limite é enviado",
+            ...json({ oneOf: [
+              { type: "array", items: ref },
+              { type: "object", required: ["dados", "paginacao"], properties: {
+                dados: { type: "array", items: ref },
+                paginacao: { $ref: "#/components/schemas/Paginacao" },
+              } },
+            ] }),
+          },
+          400: { description: "Parâmetro de consulta inválido", ...erro("limite deve estar entre 1 e 100") },
+          ...leitura,
+        },
       },
       post: {
         tags: [tag],
@@ -132,6 +170,16 @@ function modelo(nome: string, campos: Record<string, object>, obrigatorios: stri
 }
 
 const schemas = {
+  Paginacao: {
+    type: "object",
+    required: ["pagina", "limite", "total", "totalPaginas"],
+    properties: {
+      pagina: { type: "integer", minimum: 1, example: 1 },
+      limite: { type: "integer", minimum: 1, maximum: 100, example: 20 },
+      total: { type: "integer", minimum: 0, example: 42 },
+      totalPaginas: { type: "integer", minimum: 0, example: 3 },
+    },
+  },
   Erro: {
     type: "object",
     properties: { erro: textoLivre, detalhe: textoLivre },

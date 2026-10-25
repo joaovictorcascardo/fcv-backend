@@ -1,0 +1,181 @@
+# Sprint 4 — Samuel C. — somente leituras
+# Use exclusivamente uma API/banco de teste dedicado para a demonstração.
+# Faça login com uma conta de teste autorizada e preencha os tokens localmente.
+# Não envie tokens reais nem credenciais ao Git. Estes valores são placeholders.
+# Sem pagina/limite => array completo; com um deles => {dados,paginacao}.
+
+@api = http://localhost:3333/api/v1
+@token = COLE_LOCALMENTE_UM_TOKEN_FCV_DE_TESTE
+@tokenNaoFcv = COLE_LOCALMENTE_UM_TOKEN_COLABORADOR_OU_CONVENIADO_DE_TESTE
+
+### 200 — legado: array completo, sem paginação implícita
+GET {{api}}/colaboradores
+Authorization: Bearer {{token}}
+
+### 200 — página 1; limite=2 facilita conferir total e páginas distintas
+GET {{api}}/colaboradores?pagina=1&limite=2&ordenarPor=id&ordem=asc
+Authorization: Bearer {{token}}
+
+### 200 — página 2: não deve repetir os IDs da página 1
+GET {{api}}/colaboradores?pagina=2&limite=2&ordenarPor=id&ordem=asc
+Authorization: Bearer {{token}}
+
+### 200 — só pagina ativa o envelope, com limite padrão 20
+GET {{api}}/colaboradores?pagina=1
+Authorization: Bearer {{token}}
+
+### 200 — só limite ativa o envelope, com página padrão 1
+GET {{api}}/colaboradores?limite=2
+Authorization: Bearer {{token}}
+
+### 200 — filtros sem pagina/limite continuam retornando array completo
+GET {{api}}/colaboradores?status=ATIVO&ordenarPor=id&ordem=asc
+Authorization: Bearer {{token}}
+
+### 200 — busca literal sem resultados: dados=[], total=0, totalPaginas=0
+GET {{api}}/colaboradores?pagina=1&limite=2&busca=NAO_EXISTE_SPRINT4_XYZ_93821
+Authorization: Bearer {{token}}
+
+### 200 — página além do fim mantém total real e devolve dados=[]
+GET {{api}}/colaboradores?pagina=999999&limite=2
+Authorization: Bearer {{token}}
+
+### 200 — coleção 1 de 10: perfis
+GET {{api}}/perfis?pagina=1&limite=2&ordenarPor=id&ordem=asc
+Authorization: Bearer {{token}}
+
+### 200 — coleção 2 de 10: usuários, sem senha/hash na resposta
+GET {{api}}/usuarios?pagina=1&limite=2&ordenarPor=id&ordem=asc
+Authorization: Bearer {{token}}
+
+### 200 — coleção 3 de 10: colaboradores
+GET {{api}}/colaboradores?pagina=1&limite=2&ordenarPor=id&ordem=asc
+Authorization: Bearer {{token}}
+
+### 200 — coleção 4 de 10: conveniados
+GET {{api}}/conveniados?pagina=1&limite=2&ordenarPor=id&ordem=asc
+Authorization: Bearer {{token}}
+
+### 200 — coleção 5 de 10: benefícios
+GET {{api}}/beneficios?pagina=1&limite=2&ordenarPor=id&ordem=asc
+Authorization: Bearer {{token}}
+
+### 200 — coleção 6 de 10: ofertas comuns
+GET {{api}}/ofertas?pagina=1&limite=2&ordenarPor=id&ordem=asc
+Authorization: Bearer {{token}}
+
+### 200 — coleção 7 de 10: campanhas
+GET {{api}}/campanhas?pagina=1&limite=2&ordenarPor=id&ordem=asc
+Authorization: Bearer {{token}}
+
+### 200 — coleção 8 de 10: itens de campanha
+GET {{api}}/itens-campanha?pagina=1&limite=2&ordenarPor=id&ordem=asc
+Authorization: Bearer {{token}}
+
+### 200 — coleção 9 de 10: ofertas de campanha
+GET {{api}}/ofertas-campanha?pagina=1&limite=2&ordenarPor=id&ordem=asc
+Authorization: Bearer {{token}}
+
+### 200 — coleção 10 de 10: utilizações
+GET {{api}}/utilizacoes?pagina=1&limite=2&ordenarPor=id&ordem=asc
+Authorization: Bearer {{token}}
+
+### 200 — nome do colaborador pelo usuário relacionado + status + admissão
+GET {{api}}/colaboradores?pagina=1&limite=2&busca=Carla&status=ATIVO&dataInicio=2020-01-01&dataFim=2026-10-27&ordenarPor=nome&ordem=asc
+Authorization: Bearer {{token}}
+
+### 200 — busca literal: % e _ não representam curingas
+GET {{api}}/beneficios?pagina=1&limite=2&busca=50%25_
+Authorization: Bearer {{token}}
+
+### 200 — perfis: filtros combinados
+GET {{api}}/perfis?pagina=1&limite=2&escopo=FCV&status=ATIVO&ordenarPor=nome&ordem=asc
+Authorization: Bearer {{token}}
+
+### 200 — usuários: filtra criação e preserva os campos públicos
+GET {{api}}/usuarios?pagina=1&limite=2&status=ATIVO&dataInicio=2026-10-01&dataFim=2026-10-27&ordenarPor=data_criacao&ordem=desc
+Authorization: Bearer {{token}}
+
+### 200 — conveniados: categoria é igualdade, busca é substring
+GET {{api}}/conveniados?pagina=1&limite=2&status=ATIVO&busca=Farm&ordenarPor=nome_fantasia&ordem=asc
+Authorization: Bearer {{token}}
+
+### 200 — benefícios: enums do recurso
+GET {{api}}/beneficios?pagina=1&limite=2&status=ATIVO&tipo_beneficio=PERCENTUAL&tipo_janela=CALENDARIO_FIXO&ordenarPor=valor&ordem=desc
+Authorization: Bearer {{token}}
+
+### 200 — ofertas comuns: ajuste IDs à massa de teste; zero resultados também é válido
+GET {{api}}/ofertas?pagina=1&limite=2&beneficio_id=1&conveniado_id=1&status=ATIVO
+Authorization: Bearer {{token}}
+
+### 200 — campanhas que se sobrepõem a qualquer dia do período
+GET {{api}}/campanhas?pagina=1&limite=2&dataInicio=2026-10-24&dataFim=2026-10-27&ordenarPor=data_inicio&ordem=asc
+Authorization: Bearer {{token}}
+
+### 200 — itens de uma campanha: ajuste campanha_id à massa de teste
+GET {{api}}/itens-campanha?pagina=1&limite=2&campanha_id=1&status=ATIVO&tipo_beneficio=VALOR_FIXO&ordenarPor=nome&ordem=asc
+Authorization: Bearer {{token}}
+
+### 200 — ofertas de campanha: não confundir com o beneficio_id da oferta comum
+GET {{api}}/ofertas-campanha?pagina=1&limite=2&beneficio_campanha_id=1&conveniado_id=1&status=ATIVO
+Authorization: Bearer {{token}}
+
+### 200 — utilizações: inclui todos os horários do último dia
+GET {{api}}/utilizacoes?pagina=1&limite=2&dataInicio=2026-10-01&dataFim=2026-10-27&ordenarPor=data_solicitacao&ordem=desc
+Authorization: Bearer {{token}}
+
+### 200 — utilizações por conveniado e origem; filtro não cria autorização pessoal
+GET {{api}}/utilizacoes?pagina=1&limite=2&conveniado_id=1&origem=CAMPANHA&status=APROVADA&canal_validacao=APP_CONVENIADO
+Authorization: Bearer {{token}}
+
+### 400 — página inválida
+GET {{api}}/colaboradores?pagina=0&limite=2
+Authorization: Bearer {{token}}
+
+### 400 — limite acima do máximo
+GET {{api}}/colaboradores?limite=101
+Authorization: Bearer {{token}}
+
+### 400 — inteiro fracionário
+GET {{api}}/colaboradores?pagina=1.5
+Authorization: Bearer {{token}}
+
+### 400 — campo de ordenação não permitido
+GET {{api}}/usuarios?pagina=1&ordenarPor=senha
+Authorization: Bearer {{token}}
+
+### 400 — ordem inválida
+GET {{api}}/colaboradores?ordem=aleatoria
+Authorization: Bearer {{token}}
+
+### 400 — parâmetro repetido não vira array de filtros
+GET {{api}}/colaboradores?status=ATIVO&status=INATIVO
+Authorization: Bearer {{token}}
+
+### 400 — parâmetro desconhecido
+GET {{api}}/colaboradores?parametroDesconhecido=1
+Authorization: Bearer {{token}}
+
+### 400 — enum inválido
+GET {{api}}/colaboradores?status=DESCONTINUADO
+Authorization: Bearer {{token}}
+
+### 400 — data inexistente
+GET {{api}}/utilizacoes?dataInicio=2026-02-30
+Authorization: Bearer {{token}}
+
+### 400 — intervalo invertido
+GET {{api}}/campanhas?dataInicio=2026-10-27&dataFim=2026-10-24
+Authorization: Bearer {{token}}
+
+### 401 — sem Authorization
+GET {{api}}/colaboradores?pagina=1&limite=2
+
+### 401 — token inválido
+GET {{api}}/colaboradores?pagina=1&limite=2
+Authorization: Bearer token-invalido-de-teste
+
+### 403 — JWT válido de COLABORADOR/CONVENIADO em rota interna FCV
+# Preencha tokenNaoFcv com um token válido desse escopo. Token placeholder gera 401.
+GET {{api}}/usuarios?pagina=1&limite=2
+Authorization: Bearer {{tokenNaoFcv}}

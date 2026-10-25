@@ -3,7 +3,7 @@ import { conveniadoModel } from "../models/conveniadoModel";
 
 export const conveniadoController = {
   async listar(req: Request, res: Response) {
-    const lista = await conveniadoModel.listar();
+    const lista = await conveniadoModel.listar(req.query);
     res.json(lista);
   },
 

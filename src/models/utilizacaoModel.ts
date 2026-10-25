@@ -1,11 +1,12 @@
 import { randomUUID } from "crypto";
 import db from "../database/db";
+import { listarRecurso } from "../queries/recursos";
 
 const TABELA = "utilizacao";
 
 export const utilizacaoModel = {
-  listar() {
-    return db(TABELA).select("*");
+  listar(consulta: unknown = {}) {
+    return listarRecurso(db, "utilizacoes", consulta);
   },
 
   buscarPorId(id: number) {

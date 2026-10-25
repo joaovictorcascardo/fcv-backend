@@ -4,6 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "check": "tsc --noEmit -p tsconfig.tests.json",
+    "test": "tsx --test tests/listagem.test.ts tests/recursos.test.ts",
+    "test:mysql": "tsx --test tests/mysql.test.ts",
     "dev": "tsx watch src/server.ts",
     "knex": "tsx node_modules/knex/bin/cli.js",
     "db:migrate": "npm run knex -- migrate:latest",

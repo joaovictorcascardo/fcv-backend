@@ -3,7 +3,7 @@ import { utilizacaoModel } from "../models/utilizacaoModel";
 
 export const utilizacaoController = {
   async listar(req: Request, res: Response) {
-    const lista = await utilizacaoModel.listar();
+    const lista = await utilizacaoModel.listar(req.query);
     res.json(lista);
   },
 

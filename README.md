@@ -243,28 +243,32 @@ requests/            requisições de teste para a extensão REST Client do VS C
 
 ## 8. Fluxo de trabalho no Git
 
-Para quem programa a API. O grupo trabalha na `develop`; a `main` recebe a `develop` depois de testada e é a versão entregue.
+Para quem programa a API. Cada integrante trabalha em uma branch individual; `develop` reúne as entregas aprovadas e `main` recebe a `develop` depois dos testes integrados.
+
+Para começar em uma nova cópia limpa:
 
 ```bash
-git checkout develop
+git clone https://github.com/joaovictorcascardo/fcv-backend.git
+cd fcv-backend
+git switch develop
+git pull --ff-only origin develop
+git switch -c feature/seu-nome-sua-task
+npm ci
 ```
 
-Antes de começar:
+Atalho para o clone: `git clone -b develop https://github.com/joaovictorcascardo/fcv-backend.git`. Depois entre na pasta e crie sua branch individual. O prefixo `feature/` é um exemplo; esta entrega de Samuel C. já usa `feat/samuel-c-consultas`, sem precisar renomeá-la. Não repita a criação de uma cópia limpa sobre trabalho local existente.
+
+Depois de terminar, revisar e testar, selecione somente os arquivos da entrega com `git add caminho/do/arquivo`. Commits podem ser criados localmente; para enviar a branch, é necessária permissão de escrita no repositório:
 
 ```bash
-git pull
-npm install
-npm run db:reset
-```
-
-Depois de terminar e testar:
-
-```bash
-git add .
+git status
+git diff
+# Depois de selecionar os arquivos revisados:
 git commit -m "feat: descreve o que foi feito"
-git pull
-git push
+git push -u origin feature/seu-nome-sua-task
 ```
+
+Use o nome real da sua branch no push. Abra um PR da branch individual para **`develop`**, peça revisão e resolva conflitos na branch individual. Repita os testes e integre somente após aprovação. Depois que a `develop` integrada estiver testada, abra um PR **`develop → main`**. Este fluxo não presume deploy automático do backend.
 
 Prefixos de commit: `feat:` funcionalidade nova, `fix:` correção, `docs:` documentação, `test:` testes, `chore:` configuração.
 
@@ -272,3 +276,32 @@ Prefixos de commit: `feat:` funcionalidade nova, `fix:` correção, `docs:` docu
 
 - Nunca altere uma migration que já está na `develop`. Se uma tabela precisar mudar, crie uma migration nova.
 - Ao criar ou mudar uma rota, atualize também o `src/docs/swagger.ts`.
+- Não use reset do banco como passo de Git. Migrations e seeds de teste só devem atingir a base dedicada, sem apagar a base da apresentação.
+
+---
+
+## 9. Sprint 4 — entrega local de Samuel C.
+
+Na Sprint 4, o **Grupo 3 cuida do backend**, o Grupo 1 do portal web e o Grupo 2 do aplicativo. Esta seção complementa a documentação histórica acima e aplica o fluxo de trabalho da seção 8 à entrega de Samuel C.
+
+A parte de Samuel C. compreende S4-01 (contrato com os consumidores) e S4-07 (filtros, ordenação e paginação no servidor), mantendo Knex e MySQL. A implementação está na branch `feat/samuel-c-consultas`, aguardando revisão e integração pela equipe. O aceite do contrato pelos Grupos 1 e 2 permanece pendente.
+
+- [Contrato completo, matriz de acesso e roteiro de demonstração](docs/contrato-listagens-sprint4.md).
+- [Exemplos de leitura para REST Client](requests/listagens.http).
+- Swagger: `http://localhost:3333/api/v1/docs`.
+
+As dez listagens preservam o **array completo** quando `pagina` e `limite` não são enviados. Enviar um desses parâmetros ativa `{ dados, paginacao }`, com página padrão 1 e limite padrão 20, de 1 a 100. Os filtros e campos de ordenação permitidos de cada recurso estão no contrato. O portal atual pode continuar consumindo os arrays sem truncamento silencioso.
+
+Verifique esta entrega com:
+
+```bash
+npm ci
+npm run check
+npm test
+```
+
+Use banco dedicado para testes de integração. **Não use `db:reset` nem seeds de limpeza na base existente da apresentação.** A busca não requer apagar dados. Segredos e tokens ficam somente na configuração local.
+
+Para iniciar uma cópia limpa: clone o repositório, entre na pasta, execute `git switch develop`, atualize com `git pull --ff-only origin develop` e crie uma branch individual com `git switch -c feature/seu-nome-sua-task`. O atalho de clone é `git clone -b develop https://github.com/joaovictorcascardo/fcv-backend.git`. Os nomes são individuais; esta entrega local já usa `feat/samuel-c-consultas`, sem precisar renomeá-la. Não repita o início de uma cópia limpa sobre alterações locais existentes.
+
+Quando receber acesso, revise os arquivos, teste e faça seus próprios commits `feat:`. Abra um PR da branch individual para **`develop`**; resolva conflitos nessa branch, repita os testes e integre somente após aprovação. Depois de testar a `develop` integrada, abra um PR **`develop → main`**. Não se presume deploy automático do backend. As tasks não foram confirmadas automaticamente no Notion.

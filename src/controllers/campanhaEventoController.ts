@@ -3,7 +3,7 @@ import { campanhaEventoModel } from "../models/campanhaEventoModel";
 
 export const campanhaEventoController = {
   async listar(req: Request, res: Response) {
-    const lista = await campanhaEventoModel.listar();
+    const lista = await campanhaEventoModel.listar(req.query);
     res.json(lista);
   },
 

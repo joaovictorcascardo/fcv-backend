@@ -4,7 +4,7 @@ import { beneficioModel } from "../models/beneficioModel";
 
 export const beneficioController = {
   async listar(req: Request, res: Response) {
-    const lista = await beneficioModel.listar();
+    const lista = await beneficioModel.listar(req.query);
     res.json(lista);
   },
 
