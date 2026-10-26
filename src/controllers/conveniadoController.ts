@@ -195,11 +195,27 @@ export const conveniadoController = {
   },
 
   async excluir(req: Request, res: Response) {
-    const excluidos = await conveniadoModel.excluir(Number(req.params.id));
-    if (!excluidos) {
+    const id = validarId(req.params.id);
+    if (!id) {
+      res.status(400).json({ erro: "ID inválido. Informe um número inteiro positivo" });
+      return;
+    }
+
+    const conveniado = await conveniadoModel.buscarPorId(id);
+    if (!conveniado) {
       res.status(404).json({ erro: "Conveniado não encontrado" });
       return;
     }
+
+    const vinculos = await conveniadoModel.contarVinculos(id);
+    if (vinculos.beneficios > 0 || vinculos.campanhas > 0) {
+      res.status(409).json({
+        erro: "Não é possível excluir conveniado com benefícios ou campanhas vinculados. Inative o conveniado alterando seu status para INATIVO",
+      });
+      return;
+    }
+
+    await conveniadoModel.excluir(id);
     res.status(204).send();
   },
 };
