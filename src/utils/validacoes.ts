@@ -161,3 +161,70 @@ export function validarTelefone(telefone: unknown) {
   }
   return { valor: limpo };
 }
+
+
+// Validações dos Conveniados
+export const STATUS_CONVENIADO_VALIDOS = ["ATIVO", "INATIVO", "EM_ANALISE"] as const;
+
+export function validarNomeFantasia(nome: unknown) {
+  if (!nome || typeof nome !== "string" || !nome.trim()) {
+    return { erro: "Informe o nome fantasia do conveniado", status: 400 };
+  }
+  const limpo = nome.trim();
+  if (limpo.length > 150) {
+    return { erro: "O nome fantasia não pode ter mais de 150 caracteres", status: 400 };
+  }
+  return { valor: limpo };
+}
+
+export function validarRazaoSocial(razao: unknown) {
+  if (!razao || typeof razao !== "string" || !razao.trim()) {
+    return { erro: "Informe a razão social do conveniado", status: 400 };
+  }
+  const limpo = razao.trim();
+  if (limpo.length > 150) {
+    return { erro: "A razão social não pode ter mais de 150 caracteres", status: 400 };
+  }
+  return { valor: limpo };
+}
+
+export function validarCategoria(categoria: unknown) {
+  if (!categoria || typeof categoria !== "string" || !categoria.trim()) {
+    return { erro: "Informe a categoria do conveniado", status: 400 };
+  }
+  const limpo = categoria.trim();
+  if (limpo.length > 60) {
+    return { erro: "A categoria não pode ter mais de 60 caracteres", status: 400 };
+  }
+  return { valor: limpo };
+}
+
+export function validarCNPJConveniado(cnpj: unknown) {
+  if (!cnpj || typeof cnpj !== "string" || !cnpj.trim()) {
+    return { erro: "Informe o CNPJ do conveniado", status: 400 };
+  }
+  const apenasDigitos = cnpj.replace(/\D/g, "");
+  if (apenasDigitos.length !== 14) {
+    return { erro: "CNPJ inválido. Informe exatamente 14 dígitos", status: 400 };
+  }
+  return { valor: apenasDigitos };
+}
+
+export function validarEndereco(endereco: unknown) {
+  if (!endereco || typeof endereco !== "string" || !endereco.trim()) {
+    return { erro: "Informe o endereço do conveniado", status: 400 };
+  }
+  const limpo = endereco.trim();
+  if (limpo.length > 255) {
+    return { erro: "O endereço não pode ter mais de 255 caracteres", status: 400 };
+  }
+  return { valor: limpo };
+}
+
+export function validarStatusConveniado(status: unknown) {
+  if (status === undefined) return {};
+  if (!STATUS_CONVENIADO_VALIDOS.includes(status as any)) {
+    return { erro: "Status inválido. Opções permitidas: ATIVO, INATIVO, EM_ANALISE", status: 400 };
+  }
+  return { valor: status };
+}
