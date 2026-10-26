@@ -110,7 +110,7 @@ export const usuarioController = {
         res.status(valEmail.status).json({ erro: valEmail.erro });
         return;
       }
-      if (valEmail.valor !== usuarioAtual.email) {
+    if (valEmail.valor !== usuarioAtual.email) {
         const emailEmUso = await usuarioModel.buscarPorEmail(valEmail.valor!);
         if (emailEmUso) {
           res.status(409).json({ erro: "Já existe um usuário com esse e-mail" });
@@ -151,6 +151,15 @@ export const usuarioController = {
       }
       dadosAtualizar.status = valStatus.valor;
     }
+
+    if (Object.keys(dadosAtualizar).length === 0) {
+      res.status(400).json({ erro: "Nenhum dado válido fornecido para atualização" });
+      return;
+    }
+
+    await usuarioModel.atualizar(id, dadosAtualizar);
+    const atualizado = await usuarioModel.buscarPorId(id);
+    res.json(atualizado);
   },
 
   async excluir(req: Request, res: Response) {
