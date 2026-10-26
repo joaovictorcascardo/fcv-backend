@@ -13,6 +13,8 @@ export type ConfiguracaoListagem = {
   busca?: readonly string[];
   ordenarPor: Readonly<Record<string, string>>;
   filtros?: Readonly<Record<string, FiltroListagem>>;
+  padrao?: { ordenarPor: string; ordem: "asc" | "desc" };
+  intervalo?: readonly [string, string];
 };
 
 export class ConsultaInvalida extends Error {
@@ -110,11 +112,11 @@ export function analisarConsulta(
     throw new ConsultaInvalida("A página solicitada está fora do intervalo permitido");
   }
 
-  const ordenarPor = parametros.ordenarPor ?? "id";
+  const ordenarPor = parametros.ordenarPor ?? configuracao.padrao?.ordenarPor ?? "id";
   if (!tem(configuracao.ordenarPor, ordenarPor)) {
     throw new ConsultaInvalida("ordenarPor não é um campo permitido neste recurso");
   }
-  const ordem = parametros.ordem ?? "asc";
+  const ordem = parametros.ordem ?? configuracao.padrao?.ordem ?? "asc";
   if (ordem !== "asc" && ordem !== "desc") {
     throw new ConsultaInvalida("ordem deve ser asc ou desc");
   }
@@ -137,9 +139,9 @@ export function analisarConsulta(
     }
     filtros.push({ configuracao: filtro, valor });
   }
-  if (tem(parametros, "dataInicio") && tem(parametros, "dataFim") &&
-      parametros.dataInicio > parametros.dataFim) {
-    throw new ConsultaInvalida("dataInicio não pode ser posterior a dataFim");
+  const [inicio, fim] = configuracao.intervalo ?? ["dataInicio", "dataFim"];
+  if (tem(parametros, inicio) && tem(parametros, fim) && parametros[inicio] > parametros[fim]) {
+    throw new ConsultaInvalida(`${inicio} não pode ser posterior a ${fim}`);
   }
 
   return { paginada, pagina, limite, deslocamento, busca: parametros.busca, ordenarPor, ordem, filtros };
