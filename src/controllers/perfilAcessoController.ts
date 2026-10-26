@@ -83,6 +83,26 @@ export const perfilAcessoController = {
       return;
     }
 
+    const { nome } = req.body ?? {};
+    const dadosAtualizar: Record<string, any> = {};
+
+    // Se enviou nome, valida e checa conflito com outros perfis
+    if (nome !== undefined) {
+      const valNome = validarNomePerfil(nome);
+      if (valNome.erro) {
+        res.status(valNome.status).json({ erro: valNome.erro });
+        return;
+      }
+      if (valNome.valor !== perfilAtual.nome) {
+        const jaExiste = await perfilAcessoModel.buscarPorNome(valNome.valor!);
+        if (jaExiste && jaExiste.id !== id) {
+          res.status(409).json({ erro: "Já existe outro perfil com esse nome" });
+          return;
+        }
+      }
+      dadosAtualizar.nome = valNome.valor;
+    }
+
     await perfilAcessoModel.atualizar(id, req.body);
     const atualizado = await perfilAcessoModel.buscarPorId(id);
     res.json(atualizado);
