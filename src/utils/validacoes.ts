@@ -60,4 +60,16 @@ export function validarNomeUsuario(nome: unknown) {
   return { valor: formatado };
 }
 
+export function validarEmailUsuario(email: unknown) {
+  if (!email || typeof email !== "string" || !email.trim()) {
+    return { erro: "Informe o e-mail do usuário", status: 400 };
+  }
+  const limpo = email.trim().toLowerCase();
+  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!regex.test(limpo) || limpo.length > 150) {
+    return { erro: "Formato de e-mail inválido", status: 400 };
+  }
+  return { valor: limpo };
+}
+
 
