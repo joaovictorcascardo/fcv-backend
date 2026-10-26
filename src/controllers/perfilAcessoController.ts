@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { perfilAcessoModel } from "../models/perfilAcessoModel";
-import { validarEscopo, validarId, validarNomePerfil } from "../utils/validacoes";
+import { validarEscopo, validarId, validarNomePerfil, validarStatusPerfil } from "../utils/validacoes";
 
 const ESCOPOS_VALIDOS = ["FCV", "COLABORADOR", "CONVENIADO"] as const;
 const STATUS_VALIDOS = ["ATIVO", "INATIVO"] as const;
@@ -83,7 +83,7 @@ export const perfilAcessoController = {
       return;
     }
 
-    const { nome, escopo } = req.body ?? {};
+    const { nome, escopo, status } = req.body ?? {};
     const dadosAtualizar: Record<string, any> = {};
 
     // Se enviou nome, valida e checa conflito com outros perfis
@@ -111,6 +111,16 @@ export const perfilAcessoController = {
         return;
       }
       dadosAtualizar.escopo = valEscopo.valor;
+    }
+
+    // Se enviou status, valida
+    if (status !== undefined) {
+      const valStatus = validarStatusPerfil(status);
+      if (valStatus.erro) {
+        res.status(valStatus.status).json({ erro: valStatus.erro });
+        return;
+      }
+      dadosAtualizar.status = valStatus.valor;
     }
 
     await perfilAcessoModel.atualizar(id, req.body);
