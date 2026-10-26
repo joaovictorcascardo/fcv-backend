@@ -13,6 +13,10 @@ export const beneficioCampanhaConveniadoModel = {
     return db(TABELA).where({ id }).first();
   },
 
+  buscarPorPar(beneficioCampanhaId: number, conveniadoId: number) {
+    return db(TABELA).where({ beneficio_campanha_id: beneficioCampanhaId, conveniado_id: conveniadoId }).first();
+  },
+
   async criar(dados: any) {
     const [id] = await db(TABELA).insert(dados);
     return id;
