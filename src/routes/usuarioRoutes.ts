@@ -1,12 +1,11 @@
 import { Router } from "express";
+import { permitirPerfil } from "../middlewares/permitir";
 import { usuarioController } from "../controllers/usuarioController";
-
 const router = Router();
-
+const soAdministrador = permitirPerfil("FCV_ADMINISTRADOR");
 router.get("/", usuarioController.listar);
 router.get("/:id", usuarioController.buscar);
-router.post("/", usuarioController.criar);
-router.put("/:id", usuarioController.atualizar);
-router.delete("/:id", usuarioController.excluir);
-
+router.post("/", soAdministrador, usuarioController.criar);
+router.put("/:id", soAdministrador, usuarioController.atualizar);
+router.delete("/:id", soAdministrador, usuarioController.excluir);
 export default router;
