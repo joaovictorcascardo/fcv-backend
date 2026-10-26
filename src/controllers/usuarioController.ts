@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { usuarioModel } from "../models/usuarioModel";
+import { validarId } from "../utils/validacoes";
 
 export const usuarioController = {
   async listar(req: Request, res: Response) {
@@ -7,8 +8,13 @@ export const usuarioController = {
     res.json(lista);
   },
 
-  async buscar(req: Request, res: Response) {
-    const item = await usuarioModel.buscarPorId(Number(req.params.id));
+    async buscar(req: Request, res: Response) {
+    const id = validarId(req.params.id);
+    if (!id) {
+      res.status(400).json({ erro: "ID inválido. Informe um número inteiro positivo" });
+      return;
+    }
+    const item = await usuarioModel.buscarPorId(id);
     if (!item) {
       res.status(404).json({ erro: "Usuário não encontrado" });
       return;
