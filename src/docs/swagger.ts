@@ -1,5 +1,6 @@
 import { recursosListagem, type NomeRecursoListagem } from "../queries/recursos";
 import type { ConfiguracaoListagem } from "../queries/listagem";
+import { mensagemExclusaoBloqueada } from "../models/historicoModel";
 
 const texto = (maxLength: number) => ({ type: "string", maxLength });
 const textoLivre = { type: "string" };
@@ -56,6 +57,8 @@ type Recurso = {
   soFcv?: boolean;
   soAdministrador?: boolean;
   observacao?: string;
+  exclusao?: { descricao: string; conflito: string };
+  cancelamento?: string;
 };
 
 function parametrosListagem(caminho: string) {
@@ -78,7 +81,7 @@ function parametrosListagem(caminho: string) {
   ];
 }
 
-function crud({ caminho, tag, nome, schema, exemplo, naoEncontrado: mensagem, soFcv, soAdministrador, observacao }: Recurso) {
+function crud({ caminho, tag, nome, schema, exemplo, naoEncontrado: mensagem, soFcv, soAdministrador, observacao, exclusao, cancelamento }: Recurso) {
   const ref = { $ref: `#/components/schemas/${schema}` };
   const refEntrada = { $ref: `#/components/schemas/${schema}Entrada` };
   const refAlteracao = { $ref: `#/components/schemas/${schema}Alteracao` };
@@ -156,13 +159,26 @@ function crud({ caminho, tag, nome, schema, exemplo, naoEncontrado: mensagem, so
           ...escrita,
         },
       },
-      delete: {
+      delete: cancelamento ? {
+        tags: [tag],
+        summary: `Cancela ${nome.toLowerCase()} sem apagar`,
+        description: cancelamento,
+        responses: {
+          200: { description: "Cancelada: o registro continua no histórico com o novo status", ...json(ref) },
+          404: naoEncontrado,
+          409: { description: "Já está REPROVADA ou ESTORNADA, ou o status mudou durante o cancelamento", ...erro("Utilização já encerrada (status ESTORNADA): não pode ser cancelada") },
+          ...escrita,
+        },
+      } : {
         tags: [tag],
         summary: `Exclui ${nome.toLowerCase()}`,
+        description: exclusao?.descricao,
         responses: {
           204: { description: "Registro excluído" },
           404: naoEncontrado,
-          409: { description: "Há registros ligados a este", ...erro("Não é possível excluir: há outros registros ligados a este") },
+          409: exclusao
+            ? { description: "Há utilizações registradas ligadas a este cadastro, ou outros registros ligados a ele", ...erro(exclusao.conflito) }
+            : { description: "Há registros ligados a este", ...erro("Não é possível excluir: há outros registros ligados a este") },
           ...escrita,
         },
       },
@@ -417,6 +433,10 @@ const recursos: Recurso[] = [
     tag: "Benefícios",
     nome: "Benefício",
     schema: "Beneficio",
+    exclusao: {
+      descricao: "Benefício com utilizações registradas em qualquer oferta comum dele não pode ser excluído: altere o status para INATIVO ou DESCONTINUADO. O histórico de uso nunca é apagado.",
+      conflito: mensagemExclusaoBloqueada("beneficio"),
+    },
     exemplo: { nome: "Ingresso de cinema", descricao: "R$ 20,00 de desconto no ingresso", tipo_beneficio: "VALOR_FIXO", valor: 20, quantidade_maxima_utilizacoes: 2, tipo_janela: "CALENDARIO_FIXO", unidade_ciclo: "MES" },
   },
   {
@@ -425,6 +445,10 @@ const recursos: Recurso[] = [
     tag: "Ofertas",
     nome: "Oferta",
     schema: "Oferta",
+    exclusao: {
+      descricao: "Oferta comum com utilizações registradas não pode ser excluída: altere o status para INATIVO. A checagem olha só beneficio_conveniado_id; ofertas de campanha ficam em /ofertas-campanha.",
+      conflito: mensagemExclusaoBloqueada("oferta"),
+    },
     observacao: "Liga um benefício a um conveniado. O mesmo par não pode se repetir.",
     exemplo: { beneficio_id: 1, conveniado_id: 2 },
   },
@@ -434,6 +458,10 @@ const recursos: Recurso[] = [
     tag: "Campanhas",
     nome: "Campanha",
     schema: "Campanha",
+    exclusao: {
+      descricao: "Campanha com utilizações registradas em qualquer oferta dos seus itens não pode ser excluída: altere o status para ENCERRADA ou CANCELADA. Sem utilizações, a exclusão apaga junto os itens e as ofertas de campanha dela (CASCADE das tabelas beneficio_campanha e beneficio_campanha_conveniado), pois não há histórico a perder.",
+      conflito: mensagemExclusaoBloqueada("campanha"),
+    },
     exemplo: { nome: "Novembro Azul", tipo: "CAMPANHA", descricao: "Mês de cuidado com a saúde do homem", data_inicio: "2026-11-01", data_fim: "2026-11-30", criterio_elegibilidade: "Todos os colaboradores ativos" },
   },
   {
@@ -442,7 +470,11 @@ const recursos: Recurso[] = [
     tag: "Itens de campanha",
     nome: "Item de campanha",
     schema: "ItemCampanha",
-    observacao: "Ao excluir a campanha, os itens dela são excluídos junto.",
+    exclusao: {
+      descricao: "Item com utilizações registradas em qualquer oferta de campanha dele não pode ser excluído: altere o status para INATIVO. Sem utilizações, a exclusão apaga junto as ofertas de campanha do item (CASCADE da tabela beneficio_campanha_conveniado).",
+      conflito: mensagemExclusaoBloqueada("item-campanha"),
+    },
+    observacao: "Ao excluir a campanha, os itens dela são excluídos junto (só é permitido quando nenhum item tem utilização registrada).",
     exemplo: { campanha_id: 1, nome: "Check-up com desconto", tipo_beneficio: "PERCENTUAL", valor: 30, quantidade_maxima_utilizacoes: 1 },
   },
   {
@@ -451,6 +483,10 @@ const recursos: Recurso[] = [
     tag: "Ofertas de campanha",
     nome: "Oferta de campanha",
     schema: "OfertaCampanha",
+    exclusao: {
+      descricao: "Oferta de campanha com utilizações registradas não pode ser excluída: altere o status para INATIVO. A checagem olha só beneficio_campanha_conveniado_id; ofertas comuns ficam em /ofertas.",
+      conflito: mensagemExclusaoBloqueada("oferta-campanha"),
+    },
     observacao: "Liga um item de campanha a um conveniado. O mesmo par não pode se repetir.",
     exemplo: { beneficio_campanha_id: 1, conveniado_id: 1 },
   },
@@ -461,6 +497,7 @@ const recursos: Recurso[] = [
     nome: "Utilização",
     schema: "Utilizacao",
     soFcv: true,
+    cancelamento: "Utilizações nunca são apagadas, para preservar o histórico. O DELETE cancela mudando o status: PENDENTE vira REPROVADA e APROVADA vira ESTORNADA, e acrescenta \"Cancelada pela FCV\" nas observações. Se já estiver REPROVADA ou ESTORNADA, responde 409.",
     observacao: "Informe um entre beneficio_conveniado_id e beneficio_campanha_conveniado_id, nunca os dois. Se token_qrcode não for enviado, a API gera um.",
     exemplo: { colaborador_id: 1, beneficio_conveniado_id: 1, valor_aplicado: 25 },
   },
