@@ -83,7 +83,7 @@ export const perfilAcessoController = {
       return;
     }
 
-    const { nome, escopo, status } = req.body ?? {};
+    const { nome, escopo, status, descricao, permissoes } = req.body ?? {};
     const dadosAtualizar: Record<string, any> = {};
 
     // Se enviou nome, valida e checa conflito com outros perfis
@@ -122,6 +122,9 @@ export const perfilAcessoController = {
       }
       dadosAtualizar.status = valStatus.valor;
     }
+
+    if (descricao !== undefined) dadosAtualizar.descricao = descricao;
+    if (permissoes !== undefined) dadosAtualizar.permissoes = permissoes;
 
     await perfilAcessoModel.atualizar(id, req.body);
     const atualizado = await perfilAcessoModel.buscarPorId(id);
