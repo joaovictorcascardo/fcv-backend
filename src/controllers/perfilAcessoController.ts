@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { perfilAcessoModel } from "../models/perfilAcessoModel";
-import { validarId } from "../utils/validacoes";
+import { validarId, validarNomePerfil } from "../utils/validacoes";
 
 const ESCOPOS_VALIDOS = ["FCV", "COLABORADOR", "CONVENIADO"] as const;
 const STATUS_VALIDOS = ["ATIVO", "INATIVO"] as const;
@@ -70,12 +70,20 @@ export const perfilAcessoController = {
   },
 
   async atualizar(req: Request, res: Response) {
-    const id = Number(req.params.id);
-    const alterados = await perfilAcessoModel.atualizar(id, req.body);
-    if (!alterados) {
+    // Valida ID
+    const id = validarId(req.params.id);
+    if (!id) {
+      res.status(400).json({ erro: "ID inválido. Informe um número inteiro positivo" });
+      return;
+    }
+    // Checa se o perfil existe
+    const perfilAtual = await perfilAcessoModel.buscarPorId(id);
+    if (!perfilAtual) {
       res.status(404).json({ erro: "Perfil de acesso não encontrado" });
       return;
     }
+
+    await perfilAcessoModel.atualizar(id, req.body);
     const atualizado = await perfilAcessoModel.buscarPorId(id);
     res.json(atualizado);
   },
