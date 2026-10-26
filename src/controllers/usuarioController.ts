@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { usuarioModel } from "../models/usuarioModel";
-import { validarEmailUsuario, validarId, validarNomeUsuario, validarSenha } from "../utils/validacoes";
+import { validarEmailUsuario, validarId, validarNomeUsuario, validarSenha, validarStatusUsuario } from "../utils/validacoes";
 import { perfilAcessoModel } from "../models/perfilAcessoModel";
 
 export const usuarioController = {
@@ -56,6 +56,12 @@ export const usuarioController = {
       return;
     }
     
+    const valStatus = validarStatusUsuario(status);
+    if (valStatus.erro) {
+      res.status(valStatus.status).json({ erro: valStatus.erro });
+      return;
+    }
+  
     const id = await usuarioModel.criar({
       nome: valNome.valor,
       email: valEmail,
