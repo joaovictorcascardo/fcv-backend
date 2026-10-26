@@ -4,6 +4,16 @@ import bcrypt from "bcryptjs";
 import jwt, { SignOptions } from "jsonwebtoken";
 import db from "../database/db";
 import { acessoModel, motivoBloqueio } from "../models/acessoModel";
+const MAXIMO_TENTATIVAS = 5;
+const MAXIMO_CODIGOS_POR_HORA = 3;
+async function podeGerarCodigo(usuarioId: number) {
+  const recentes = await db("redefinicao_senha")
+    .where({ usuario_id: usuarioId })
+    .where("data_criacao", ">", db.raw("DATE_SUB(NOW(), INTERVAL 1 HOUR)"))
+    .count({ total: "*" })
+    .first();
+  return Number(recentes?.total) < MAXIMO_CODIGOS_POR_HORA;
+}
 export const authController = {
   async login(req: Request, res: Response) {
     const { email, senha } = req.body ?? {};
@@ -50,17 +60,23 @@ export const authController = {
       return;
     }
     const usuario = await db("usuario").where({ email }).first();
-    if (!usuario) {
-      res.status(404).json({ erro: "E-mail não encontrado" });
-      return;
+    if (usuario && (await podeGerarCodigo(usuario.id))) {
+      const codigo = String(crypto.randomInt(100000, 1000000));
+      await db("redefinicao_senha")
+        .where({ usuario_id: usuario.id, usado: false })
+        .update({ usado: true });
+      await db("redefinicao_senha").insert({
+        usuario_id: usuario.id,
+        codigo: await bcrypt.hash(codigo, 10),
+        expira_em: db.raw("DATE_ADD(NOW(), INTERVAL 15 MINUTE)"),
+      });
+      if (process.env.NODE_ENV !== "production") {
+        console.log(`Código de redefinição para ${email}: ${codigo}`);
+      }
     }
-    const codigo = String(crypto.randomInt(100000, 1000000));
-    await db("redefinicao_senha").insert({
-      usuario_id: usuario.id,
-      codigo: await bcrypt.hash(codigo, 10),
-      expira_em: db.raw("DATE_ADD(NOW(), INTERVAL 15 MINUTE)"),
+    res.json({
+      mensagem: "Se o e-mail estiver cadastrado, um código foi enviado. Ele vale 15 minutos",
     });
-    res.json({ mensagem: "Código gerado. Ele vale 15 minutos", codigo });
   },
   async redefinirSenha(req: Request, res: Response) {
     const { email, codigo, nova_senha } = req.body ?? {};
@@ -74,10 +90,17 @@ export const authController = {
       .where("usuario.email", email)
       .where("redefinicao_senha.usado", false)
       .where("redefinicao_senha.expira_em", ">", db.fn.now())
+      .where("redefinicao_senha.tentativas", "<", MAXIMO_TENTATIVAS)
       .orderBy("redefinicao_senha.id", "desc")
       .first();
+    const tentativaContada =
+      pedido &&
+      (await db("redefinicao_senha")
+        .where({ id: pedido.id })
+        .where("tentativas", "<", MAXIMO_TENTATIVAS)
+        .increment("tentativas", 1));
     const codigoConfere =
-      pedido && (await bcrypt.compare(String(codigo), pedido.codigo));
+      tentativaContada && (await bcrypt.compare(String(codigo), pedido.codigo));
     if (!codigoConfere) {
       res.status(400).json({ erro: "Código inválido ou expirado" });
       return;
