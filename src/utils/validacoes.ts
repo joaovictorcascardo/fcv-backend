@@ -103,3 +103,14 @@ export function validarMatricula(matricula: unknown) {
   }
   return { valor: limpo };
 }
+
+export function validarSetor(setor: unknown) {
+  if (!setor || typeof setor !== "string" || !setor.trim()) {
+    return { erro: "Informe o setor do colaborador", status: 400 };
+  }
+  const limpo = setor.trim();
+  if (limpo.length > 100) {
+    return { erro: "O setor não pode ter mais de 100 caracteres", status: 400 };
+  }
+  return { valor: limpo };
+}
