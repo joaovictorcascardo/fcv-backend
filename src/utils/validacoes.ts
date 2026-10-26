@@ -1,6 +1,7 @@
 //Utilitário de validação de entrada para os cadastros
 const ESCOPOS_VALIDOS = ["FCV", "COLABORADOR", "CONVENIADO"] as const;
 const STATUS_VALIDOS = ["ATIVO", "INATIVO"] as const;
+export const STATUS_USUARIO_VALIDOS = ["ATIVO", "INATIVO"] as const;
 
 export function validarId(id: unknown): number | null {
   const numero = Number(id);
@@ -72,4 +73,13 @@ export function validarEmailUsuario(email: unknown) {
   return { valor: limpo };
 }
 
+export function validarSenha(senha: unknown) {
+  if (!senha || typeof senha !== "string" || !senha.trim()) {
+    return { erro: "A senha não pode ser vazia", status: 400 };
+  }
+  if (senha.length < 6) {
+    return { erro: "A senha deve ter no mínimo 6 caracteres", status: 400 };
+  }
+  return { valor: senha };
+}
 
