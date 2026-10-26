@@ -83,3 +83,10 @@ export function validarSenha(senha: unknown) {
   return { valor: senha };
 }
 
+export function validarStatusUsuario(status: unknown) {
+  if (status === undefined) return {};
+  if (!STATUS_USUARIO_VALIDOS.includes(status as any)) {
+    return { erro: "Status inválido. Opções permitidas: ATIVO, INATIVO", status: 400 };
+  }
+  return { valor: status };
+}
