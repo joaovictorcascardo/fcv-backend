@@ -61,6 +61,12 @@ export const usuarioController = {
       res.status(valStatus.status).json({ erro: valStatus.erro });
       return;
     }
+
+    const emailEmUso = await usuarioModel.buscarPorEmail(valEmail.valor!);
+    if (emailEmUso) {
+      res.status(409).json({ erro: "Já existe um usuário com esse e-mail" });
+      return;
+    }
   
     const id = await usuarioModel.criar({
       nome: valNome.valor,
