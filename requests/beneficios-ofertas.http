@@ -81,3 +81,121 @@ Authorization: Bearer {{token}}
 ###
 DELETE {{api}}/beneficios/{{novoBeneficio.response.body.$.id}}
 Authorization: Bearer {{token}}
+
+###
+# 409: a oferta 1 tem utilizações registradas (inative com PUT status INATIVO)
+DELETE {{api}}/ofertas/1
+Authorization: Bearer {{token}}
+
+###
+# 409: o benefício 1 tem utilizações pela oferta 1
+DELETE {{api}}/beneficios/1
+Authorization: Bearer {{token}}
+
+###
+# 400: id inválido na rota
+GET {{api}}/beneficios/abc
+Authorization: Bearer {{token}}
+
+###
+# 400: benefício PERCENTUAL acima de 100
+POST {{api}}/beneficios
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "Desconto impossível",
+  "tipo_beneficio": "PERCENTUAL",
+  "valor": 150,
+  "quantidade_maxima_utilizacoes": 1,
+  "tipo_janela": "CALENDARIO_FIXO",
+  "unidade_ciclo": "MES"
+}
+
+###
+# 400: JANELA_MOVEL sem intervalo_valor, intervalo_unidade e referencia_contagem
+POST {{api}}/beneficios
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "Janela incompleta",
+  "tipo_beneficio": "VALOR_FIXO",
+  "valor": 10,
+  "quantidade_maxima_utilizacoes": 1,
+  "tipo_janela": "JANELA_MOVEL"
+}
+
+###
+# 400: PUT sem nenhum campo conhecido
+PUT {{api}}/beneficios/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "campo_que_nao_existe": 1
+}
+
+###
+# 400: benefício inexistente na oferta
+POST {{api}}/ofertas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "beneficio_id": 999999,
+  "conveniado_id": 1
+}
+
+###
+# 400: oferta comum não aceita item de campanha (use /ofertas-campanha)
+POST {{api}}/ofertas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "beneficio_id": 1,
+  "conveniado_id": 2,
+  "beneficio_campanha_id": 1
+}
+
+###
+# 409: o conveniado 1 já oferece o benefício 1
+POST {{api}}/ofertas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "beneficio_id": 1,
+  "conveniado_id": 1
+}
+
+###
+# 409: a oferta 1 tem utilizações, não pode trocar de conveniado
+PUT {{api}}/ofertas/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "conveniado_id": 2
+}
+
+###
+# 200: mesmo com utilizações, a oferta pode ser inativada
+PUT {{api}}/ofertas/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "INATIVO"
+}
+
+###
+# 200: volta a oferta 1 para ATIVO
+PUT {{api}}/ofertas/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "ATIVO"
+}

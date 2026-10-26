@@ -1,5 +1,6 @@
 import { recursosListagem, type NomeRecursoListagem } from "../queries/recursos";
 import type { ConfiguracaoListagem } from "../queries/listagem";
+import { mensagemExclusaoBloqueada } from "../models/historicoModel";
 
 const texto = (maxLength: number) => ({ type: "string", maxLength });
 const textoLivre = { type: "string" };
@@ -13,6 +14,9 @@ const opcoes = (valores: string[], padrao?: string) => ({
   ...(padrao ? { default: padrao } : {}),
 });
 const opcional = (campo: object) => ({ ...campo, nullable: true });
+const textoObrigatorio = (maxLength: number) => ({ type: "string", minLength: 1, maxLength });
+const positivo = (descricao?: string) => ({ type: "number", minimum: 0, exclusiveMinimum: true, ...(descricao ? { description: descricao } : {}) });
+const inteiroPositivo = { type: "integer", minimum: 1 };
 
 const erro = (mensagem: string) => ({
   content: {
@@ -56,6 +60,9 @@ type Recurso = {
   soFcv?: boolean;
   soAdministrador?: boolean;
   observacao?: string;
+  exclusao?: { descricao: string; conflito: string };
+  cancelamento?: string;
+  observacaoAlteracao?: string;
 };
 
 function parametrosListagem(caminho: string) {
@@ -78,7 +85,7 @@ function parametrosListagem(caminho: string) {
   ];
 }
 
-function crud({ caminho, tag, nome, schema, exemplo, naoEncontrado: mensagem, soFcv, soAdministrador, observacao }: Recurso) {
+function crud({ caminho, tag, nome, schema, exemplo, naoEncontrado: mensagem, soFcv, soAdministrador, observacao, exclusao, cancelamento, observacaoAlteracao }: Recurso) {
   const ref = { $ref: `#/components/schemas/${schema}` };
   const refEntrada = { $ref: `#/components/schemas/${schema}Entrada` };
   const refAlteracao = { $ref: `#/components/schemas/${schema}Alteracao` };
@@ -147,7 +154,7 @@ function crud({ caminho, tag, nome, schema, exemplo, naoEncontrado: mensagem, so
       put: {
         tags: [tag],
         summary: `Altera ${nome.toLowerCase()}`,
-        description: "Envie só os campos que mudaram.",
+        description: ["Envie só os campos que mudaram.", observacaoAlteracao].filter(Boolean).join(" "),
         requestBody: corpo(false),
         responses: {
           200: { description: "Registro atualizado", ...json(ref) },
@@ -156,13 +163,26 @@ function crud({ caminho, tag, nome, schema, exemplo, naoEncontrado: mensagem, so
           ...escrita,
         },
       },
-      delete: {
+      delete: cancelamento ? {
+        tags: [tag],
+        summary: `Cancela ${nome.toLowerCase()} sem apagar`,
+        description: cancelamento,
+        responses: {
+          200: { description: "Cancelada: o registro continua no histórico com o novo status", ...json(ref) },
+          404: naoEncontrado,
+          409: { description: "Já está REPROVADA ou ESTORNADA, ou o status mudou durante o cancelamento", ...erro("Utilização já encerrada (status ESTORNADA): não pode ser cancelada") },
+          ...escrita,
+        },
+      } : {
         tags: [tag],
         summary: `Exclui ${nome.toLowerCase()}`,
+        description: exclusao?.descricao,
         responses: {
           204: { description: "Registro excluído" },
           404: naoEncontrado,
-          409: { description: "Há registros ligados a este", ...erro("Não é possível excluir: há outros registros ligados a este") },
+          409: exclusao
+            ? { description: "Há utilizações registradas ligadas a este cadastro, ou outros registros ligados a ele", ...erro(exclusao.conflito) }
+            : { description: "Há registros ligados a este", ...erro("Não é possível excluir: há outros registros ligados a este") },
           ...escrita,
         },
       },
@@ -170,10 +190,11 @@ function crud({ caminho, tag, nome, schema, exemplo, naoEncontrado: mensagem, so
   };
 }
 
-function modelo(nome: string, campos: Record<string, object>, obrigatorios: string[], somenteLeitura: Record<string, object> = {}) {
+function modelo(nome: string, campos: Record<string, object>, obrigatorios: string[], somenteLeitura: Record<string, object> = {}, fixos: string[] = []) {
+  const alteraveis = Object.fromEntries(Object.entries(campos).filter(([campo]) => !fixos.includes(campo)));
   return {
     [`${nome}Entrada`]: { type: "object", required: obrigatorios, properties: campos },
-    [`${nome}Alteracao`]: { type: "object", properties: campos },
+    [`${nome}Alteracao`]: { type: "object", properties: alteraveis },
     [nome]: {
       type: "object",
       properties: { id: inteiro, ...campos, ...somenteLeitura },
@@ -248,16 +269,16 @@ const schemas = {
   ...modelo(
     "Beneficio",
     {
-      nome: texto(150),
+      nome: textoObrigatorio(150),
       descricao: opcional(textoLivre),
       status: opcoes(["ATIVO", "INATIVO", "DESCONTINUADO"], "ATIVO"),
       tipo_beneficio: opcoes(["PERCENTUAL", "VALOR_FIXO"]),
-      valor: decimal,
-      quantidade_maxima_utilizacoes: inteiro,
+      valor: positivo("Maior que zero. Se tipo_beneficio for PERCENTUAL, no máximo 100"),
+      quantidade_maxima_utilizacoes: inteiroPositivo,
       tipo_janela: opcoes(["CALENDARIO_FIXO", "JANELA_MOVEL"]),
-      unidade_ciclo: opcional(opcoes(["ANO", "MES", "SEMANA"])),
+      unidade_ciclo: { ...opcional(opcoes(["ANO", "MES", "SEMANA"])), description: "Obrigatório quando tipo_janela é CALENDARIO_FIXO" },
       dia_reset: opcional(data),
-      intervalo_valor: opcional(inteiro),
+      intervalo_valor: { ...opcional(inteiroPositivo), description: "Obrigatório (com intervalo_unidade e referencia_contagem) quando tipo_janela é JANELA_MOVEL" },
       intervalo_unidade: opcional(opcoes(["DIA", "MES"])),
       referencia_contagem: opcional(opcoes(["ULTIMA_UTILIZACAO", "DATA_ADMISSAO_COLABORADOR"])),
     },
@@ -266,8 +287,8 @@ const schemas = {
   ...modelo(
     "Oferta",
     {
-      beneficio_id: inteiro,
-      conveniado_id: inteiro,
+      beneficio_id: inteiroPositivo,
+      conveniado_id: inteiroPositivo,
       status: opcoes(["ATIVO", "INATIVO"], "ATIVO"),
     },
     ["beneficio_id", "conveniado_id"],
@@ -275,11 +296,11 @@ const schemas = {
   ...modelo(
     "Campanha",
     {
-      nome: texto(150),
+      nome: textoObrigatorio(150),
       tipo: opcoes(["CAMPANHA", "EVENTO_INTERNO", "EVENTO_PATROCINADO", "VOUCHER", "CORTESIA"]),
       descricao: opcional(textoLivre),
       data_inicio: data,
-      data_fim: data,
+      data_fim: { ...data, description: "Igual ou posterior a data_inicio" },
       criterio_elegibilidade: opcional(textoLivre),
       patrocinador: opcional(texto(150)),
       status: opcoes(["PLANEJADA", "ATIVA", "ENCERRADA", "CANCELADA"], "PLANEJADA"),
@@ -289,12 +310,12 @@ const schemas = {
   ...modelo(
     "ItemCampanha",
     {
-      campanha_id: inteiro,
-      nome: texto(150),
+      campanha_id: inteiroPositivo,
+      nome: textoObrigatorio(150),
       descricao: opcional(textoLivre),
       tipo_beneficio: opcoes(["PERCENTUAL", "VALOR_FIXO"]),
-      valor: decimal,
-      quantidade_maxima_utilizacoes: opcional(inteiro),
+      valor: positivo("Maior que zero. Se tipo_beneficio for PERCENTUAL, no máximo 100"),
+      quantidade_maxima_utilizacoes: opcional(inteiroPositivo),
       status: opcoes(["ATIVO", "INATIVO"], "ATIVO"),
     },
     ["campanha_id", "nome", "tipo_beneficio", "valor"],
@@ -302,8 +323,8 @@ const schemas = {
   ...modelo(
     "OfertaCampanha",
     {
-      beneficio_campanha_id: inteiro,
-      conveniado_id: inteiro,
+      beneficio_campanha_id: inteiroPositivo,
+      conveniado_id: inteiroPositivo,
       status: opcoes(["ATIVO", "INATIVO"], "ATIVO"),
     },
     ["beneficio_campanha_id", "conveniado_id"],
@@ -311,18 +332,20 @@ const schemas = {
   ...modelo(
     "Utilizacao",
     {
-      colaborador_id: inteiro,
-      beneficio_conveniado_id: opcional(inteiro),
-      beneficio_campanha_conveniado_id: opcional(inteiro),
-      token_qrcode: { type: "string", maxLength: 64, description: "Gerado pela API se não for enviado" },
-      data_confirmacao: opcional(dataHora),
-      valor_aplicado: decimal,
+      colaborador_id: inteiroPositivo,
+      beneficio_conveniado_id: { ...opcional(inteiroPositivo), description: "Oferta comum (/ofertas). Envie este ou beneficio_campanha_conveniado_id, nunca os dois" },
+      beneficio_campanha_conveniado_id: { ...opcional(inteiroPositivo), description: "Oferta de campanha (/ofertas-campanha). Envie este ou beneficio_conveniado_id, nunca os dois" },
+      token_qrcode: { type: "string", minLength: 1, maxLength: 64, description: "Gerado pela API se não for enviado. Não pode repetir" },
+      data_solicitacao: { ...dataHora, description: "AAAA-MM-DD HH:MM:SS. Se não for enviada, usa o momento do cadastro" },
+      data_confirmacao: { ...opcional(dataHora), description: "AAAA-MM-DD HH:MM:SS" },
+      valor_aplicado: positivo(),
       canal_validacao: opcional(opcoes(["APP_CONVENIADO", "TERMINAL_IOT"])),
       status: opcoes(["PENDENTE", "APROVADA", "REPROVADA", "ESTORNADA"], "PENDENTE"),
       observacoes: opcional(textoLivre),
     },
     ["colaborador_id", "valor_aplicado"],
-    { data_solicitacao: dataHora },
+    {},
+    ["colaborador_id", "beneficio_conveniado_id", "beneficio_campanha_conveniado_id"],
   ),
   UtilizacaoDoUsuario: {
     type: "object",
@@ -417,6 +440,12 @@ const recursos: Recurso[] = [
     tag: "Benefícios",
     nome: "Benefício",
     schema: "Beneficio",
+    observacao: "Obrigatórios: nome, tipo_beneficio, valor, quantidade_maxima_utilizacoes e tipo_janela. PERCENTUAL aceita valor até 100. CALENDARIO_FIXO exige unidade_ciclo; JANELA_MOVEL exige intervalo_valor, intervalo_unidade e referencia_contagem. Campos fora da lista são ignorados.",
+    observacaoAlteracao: "As regras de percentual e de janela são conferidas com o registro como vai ficar.",
+    exclusao: {
+      descricao: "Benefício com utilizações registradas em qualquer oferta comum dele não pode ser excluído: altere o status para INATIVO ou DESCONTINUADO. O histórico de uso nunca é apagado.",
+      conflito: mensagemExclusaoBloqueada("beneficio"),
+    },
     exemplo: { nome: "Ingresso de cinema", descricao: "R$ 20,00 de desconto no ingresso", tipo_beneficio: "VALOR_FIXO", valor: 20, quantidade_maxima_utilizacoes: 2, tipo_janela: "CALENDARIO_FIXO", unidade_ciclo: "MES" },
   },
   {
@@ -425,7 +454,12 @@ const recursos: Recurso[] = [
     tag: "Ofertas",
     nome: "Oferta",
     schema: "Oferta",
-    observacao: "Liga um benefício a um conveniado. O mesmo par não pode se repetir.",
+    observacaoAlteracao: "Se a oferta já tem utilizações, trocar beneficio_id ou conveniado_id responde 409: inative a oferta e crie outra.",
+    exclusao: {
+      descricao: "Oferta comum com utilizações registradas não pode ser excluída: altere o status para INATIVO. A checagem olha só beneficio_conveniado_id; ofertas de campanha ficam em /ofertas-campanha.",
+      conflito: mensagemExclusaoBloqueada("oferta"),
+    },
+    observacao: "Liga um benefício permanente a um conveniado. beneficio_id e conveniado_id precisam existir (senão 400) e o mesmo par não pode se repetir (409). Não aceita beneficio_campanha_id: itens de campanha usam /ofertas-campanha.",
     exemplo: { beneficio_id: 1, conveniado_id: 2 },
   },
   {
@@ -434,6 +468,12 @@ const recursos: Recurso[] = [
     tag: "Campanhas",
     nome: "Campanha",
     schema: "Campanha",
+    observacao: "Obrigatórios: nome, tipo, data_inicio e data_fim (AAAA-MM-DD). data_fim não pode ser anterior a data_inicio.",
+    observacaoAlteracao: "Enviando só uma das datas, ela é comparada com a outra já gravada.",
+    exclusao: {
+      descricao: "Campanha com utilizações registradas em qualquer oferta dos seus itens não pode ser excluída: altere o status para ENCERRADA ou CANCELADA. Sem utilizações, a exclusão apaga junto os itens e as ofertas de campanha dela (CASCADE das tabelas beneficio_campanha e beneficio_campanha_conveniado), pois não há histórico a perder.",
+      conflito: mensagemExclusaoBloqueada("campanha"),
+    },
     exemplo: { nome: "Novembro Azul", tipo: "CAMPANHA", descricao: "Mês de cuidado com a saúde do homem", data_inicio: "2026-11-01", data_fim: "2026-11-30", criterio_elegibilidade: "Todos os colaboradores ativos" },
   },
   {
@@ -442,7 +482,12 @@ const recursos: Recurso[] = [
     tag: "Itens de campanha",
     nome: "Item de campanha",
     schema: "ItemCampanha",
-    observacao: "Ao excluir a campanha, os itens dela são excluídos junto.",
+    observacaoAlteracao: "Se o item já tem utilizações, trocar campanha_id responde 409: inative o item e crie outro.",
+    exclusao: {
+      descricao: "Item com utilizações registradas em qualquer oferta de campanha dele não pode ser excluído: altere o status para INATIVO. Sem utilizações, a exclusão apaga junto as ofertas de campanha do item (CASCADE da tabela beneficio_campanha_conveniado).",
+      conflito: mensagemExclusaoBloqueada("item-campanha"),
+    },
+    observacao: "Obrigatórios: campanha_id (precisa existir, senão 400), nome, tipo_beneficio e valor (PERCENTUAL até 100). Ao excluir a campanha, os itens dela são excluídos junto (só é permitido quando nenhum item tem utilização registrada).",
     exemplo: { campanha_id: 1, nome: "Check-up com desconto", tipo_beneficio: "PERCENTUAL", valor: 30, quantidade_maxima_utilizacoes: 1 },
   },
   {
@@ -451,7 +496,12 @@ const recursos: Recurso[] = [
     tag: "Ofertas de campanha",
     nome: "Oferta de campanha",
     schema: "OfertaCampanha",
-    observacao: "Liga um item de campanha a um conveniado. O mesmo par não pode se repetir.",
+    observacaoAlteracao: "Se a oferta de campanha já tem utilizações, trocar beneficio_campanha_id ou conveniado_id responde 409: inative a oferta e crie outra.",
+    exclusao: {
+      descricao: "Oferta de campanha com utilizações registradas não pode ser excluída: altere o status para INATIVO. A checagem olha só beneficio_campanha_conveniado_id; ofertas comuns ficam em /ofertas.",
+      conflito: mensagemExclusaoBloqueada("oferta-campanha"),
+    },
+    observacao: "Liga um item de campanha a um conveniado. beneficio_campanha_id e conveniado_id precisam existir (senão 400) e o mesmo par não pode se repetir (409). Não aceita beneficio_id nem beneficio_conveniado_id: benefícios permanentes usam /ofertas.",
     exemplo: { beneficio_campanha_id: 1, conveniado_id: 1 },
   },
   {
@@ -460,8 +510,10 @@ const recursos: Recurso[] = [
     tag: "Utilizações",
     nome: "Utilização",
     schema: "Utilizacao",
+    observacaoAlteracao: "colaborador_id, beneficio_conveniado_id e beneficio_campanha_conveniado_id não podem ser alterados (400): fazem parte do histórico. Para corrigir, cancele com DELETE e registre outra.",
     soFcv: true,
-    observacao: "Informe um entre beneficio_conveniado_id e beneficio_campanha_conveniado_id, nunca os dois. Se token_qrcode não for enviado, a API gera um.",
+    cancelamento: "Utilizações nunca são apagadas, para preservar o histórico. O DELETE cancela mudando o status: PENDENTE vira REPROVADA e APROVADA vira ESTORNADA, e acrescenta \"Cancelada pela FCV\" nas observações. Se já estiver REPROVADA ou ESTORNADA, responde 409.",
+    observacao: "Informe um entre beneficio_conveniado_id e beneficio_campanha_conveniado_id, nunca os dois (400). colaborador_id e a oferta precisam existir, cada uma na sua tabela (400). Se token_qrcode não for enviado, a API gera um; token repetido responde 409.",
     exemplo: { colaborador_id: 1, beneficio_conveniado_id: 1, valor_aplicado: 25 },
   },
 ];

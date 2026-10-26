@@ -83,3 +83,72 @@ Authorization: Bearer {{token}}
 ###
 DELETE {{api}}/campanhas/{{novaCampanha.response.body.$.id}}
 Authorization: Bearer {{token}}
+
+###
+# 409: o item 1 tem utilizações pela oferta de campanha 1
+DELETE {{api}}/itens-campanha/1
+Authorization: Bearer {{token}}
+
+###
+# 409: a campanha 1 tem utilizações (use status ENCERRADA ou CANCELADA)
+DELETE {{api}}/campanhas/1
+Authorization: Bearer {{token}}
+
+###
+# 400: data_fim antes de data_inicio
+POST {{api}}/campanhas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "Datas trocadas",
+  "tipo": "CAMPANHA",
+  "data_inicio": "2026-12-01",
+  "data_fim": "2026-11-01"
+}
+
+###
+# 400: data que não existe no calendário
+POST {{api}}/campanhas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "Data inválida",
+  "tipo": "CAMPANHA",
+  "data_inicio": "2026-02-30",
+  "data_fim": "2026-03-10"
+}
+
+###
+# 400: no PUT, data_fim é comparada com a data_inicio já gravada
+PUT {{api}}/campanhas/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "data_fim": "2000-01-01"
+}
+
+###
+# 400: campanha inexistente no item
+POST {{api}}/itens-campanha
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "campanha_id": 999999,
+  "nome": "Item órfão",
+  "tipo_beneficio": "VALOR_FIXO",
+  "valor": 10
+}
+
+###
+# 409: o item 1 tem utilizações, não pode trocar de campanha
+PUT {{api}}/itens-campanha/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "campanha_id": 2
+}

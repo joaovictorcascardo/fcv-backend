@@ -57,6 +57,7 @@ Content-Type: application/json
 }
 
 ###
+# 400: informe uma única origem (oferta comum OU oferta de campanha)
 POST {{api}}/utilizacoes
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -69,9 +70,73 @@ Content-Type: application/json
 }
 
 ###
+# Cancela sem apagar: APROVADA vira ESTORNADA (o registro continua no histórico)
 DELETE {{api}}/utilizacoes/{{novaUtilizacao.response.body.$.id}}
 Authorization: Bearer {{token}}
 
 ###
+# 409: a mesma utilização já está encerrada
+DELETE {{api}}/utilizacoes/{{novaUtilizacao.response.body.$.id}}
+Authorization: Bearer {{token}}
+
+###
+# Cancela sem apagar: PENDENTE vira REPROVADA
 DELETE {{api}}/utilizacoes/{{utilizacaoCampanha.response.body.$.id}}
 Authorization: Bearer {{token}}
+
+###
+# Continua aparecendo, com status REPROVADA e observação "Cancelada pela FCV"
+GET {{api}}/utilizacoes/{{utilizacaoCampanha.response.body.$.id}}
+Authorization: Bearer {{token}}
+
+###
+# 404: utilização inexistente
+DELETE {{api}}/utilizacoes/999999
+Authorization: Bearer {{token}}
+
+###
+# 400: colaborador inexistente
+POST {{api}}/utilizacoes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "colaborador_id": 999999,
+  "beneficio_conveniado_id": 1,
+  "valor_aplicado": 10
+}
+
+###
+# 400: oferta de campanha inexistente (o id é conferido na tabela de ofertas de campanha, não na de ofertas comuns)
+POST {{api}}/utilizacoes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "colaborador_id": 1,
+  "beneficio_campanha_conveniado_id": 999999,
+  "valor_aplicado": 10
+}
+
+###
+# 409: token_qrcode já usado por outra utilização
+POST {{api}}/utilizacoes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "colaborador_id": 1,
+  "beneficio_conveniado_id": 1,
+  "valor_aplicado": 10,
+  "token_qrcode": "seed-token-0001"
+}
+
+###
+# 400: colaborador e origem não podem ser trocados (histórico)
+PUT {{api}}/utilizacoes/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "colaborador_id": 2
+}

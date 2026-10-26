@@ -107,7 +107,7 @@ Resumo das rotas (todas começam com `/api/v1`):
 | `/utilizacoes` | Escopo FCV | Cada uso de um benefício, com token do QR Code e status |
 | `/eu/utilizacoes` | Colaborador e conveniado logados | Histórico de quem está logado, com filtros `status`, `de` e `ate` |
 
-Fora o `/auth`, todas têm as cinco operações: `GET /rota` lista, `GET /rota/:id` mostra um, `POST /rota` cria, `PUT /rota/:id` altera (envie só os campos que mudaram) e `DELETE /rota/:id` exclui.
+Fora o `/auth`, todas têm as cinco operações: `GET /rota` lista, `GET /rota/:id` mostra um, `POST /rota` cria, `PUT /rota/:id` altera (envie só os campos que mudaram) e `DELETE /rota/:id` exclui. A exceção é `/utilizacoes`: o `DELETE` cancela pelo status e nunca apaga (veja a [seção 10](#10-s4-06--preservação-do-histórico)).
 
 ---
 
@@ -310,3 +310,15 @@ Use banco dedicado para testes de integração. **Não use `db:reset` nem seeds 
 Para iniciar uma cópia limpa: clone o repositório, entre na pasta, execute `git switch develop`, atualize com `git pull --ff-only origin develop` e crie uma branch individual com `git switch -c feature/seu-nome-sua-task`. O atalho de clone é `git clone -b develop https://github.com/joaovictorcascardo/fcv-backend.git`. Os nomes são individuais; esta entrega local já usa `feat/samuel-c-consultas`, sem precisar renomeá-la. Não repita o início de uma cópia limpa sobre alterações locais existentes.
 
 Quando receber acesso, revise os arquivos, teste e faça seus próprios commits `feat:`. Abra um PR da branch individual para **`develop`**; resolva conflitos nessa branch, repita os testes e integre somente após aprovação. Depois de testar a `develop` integrada, abra um PR **`develop → main`**. Não se presume deploy automático do backend. As tasks não foram confirmadas automaticamente no Notion.
+
+---
+
+## 10. S4-06 — preservação do histórico
+
+O histórico de uso dos benefícios não pode sumir. Por isso:
+
+- **Utilizações nunca são apagadas.** `DELETE /utilizacoes/:id` cancela mudando o status: `PENDENTE` vira `REPROVADA` e `APROVADA` vira `ESTORNADA`, com "Cancelada pela FCV" nas observações. Se já estiver `REPROVADA` ou `ESTORNADA`, responde `409`.
+- **Cadastros do catálogo com utilizações não são excluídos.** Benefício, oferta, campanha, item de campanha e oferta de campanha respondem `409` quando há utilização ligada, e a mensagem diz para inativar (`INATIVO`, `DESCONTINUADO`, `ENCERRADA` ou `CANCELADA`). Oferta comum e oferta de campanha são conferidas cada uma pela sua própria FK.
+- **O banco também protege.** As FKs da tabela `utilizacao` (migration 10) não têm `CASCADE`: o MySQL recusa apagar uma oferta que tenha utilização.
+- **O `CASCADE` das migrations 08 e 09 foi revisado e mantido.** Ao excluir uma campanha ou um item, ele apaga junto os itens e as ofertas de campanha, mas isso só acontece quando não há utilização nenhuma, porque a API bloqueia antes com `409`. Nenhuma migration existente foi alterada.
+- O `CASCADE` da migration 11 só apaga códigos de troca de senha do usuário excluído; não é histórico.
