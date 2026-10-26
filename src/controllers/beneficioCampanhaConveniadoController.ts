@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { beneficioCampanhaConveniadoModel } from "../models/beneficioCampanhaConveniadoModel";
+import { mensagemExclusaoBloqueada } from "../models/historicoModel";
 
 export const beneficioCampanhaConveniadoController = {
   async listar(req: Request, res: Response) {
@@ -57,9 +58,14 @@ export const beneficioCampanhaConveniadoController = {
   },
 
   async excluir(req: Request, res: Response) {
+    const id = Number(req.params.id);
+    if (await beneficioCampanhaConveniadoModel.contarUtilizacoes(id)) {
+      res.status(409).json({ erro: mensagemExclusaoBloqueada("oferta-campanha") });
+      return;
+    }
     const excluidos =
       await beneficioCampanhaConveniadoModel.excluir(
-        Number(req.params.id)
+        id
       );
 
     if (!excluidos) {

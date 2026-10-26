@@ -1,6 +1,7 @@
 
 import { Request, Response } from "express";
 import { beneficioModel } from "../models/beneficioModel";
+import { mensagemExclusaoBloqueada } from "../models/historicoModel";
 
 export const beneficioController = {
   async listar(req: Request, res: Response) {
@@ -35,7 +36,12 @@ export const beneficioController = {
   },
 
   async excluir(req: Request, res: Response) {
-    const excluidos = await beneficioModel.excluir(Number(req.params.id));
+    const id = Number(req.params.id);
+    if (await beneficioModel.contarUtilizacoes(id)) {
+      res.status(409).json({ erro: mensagemExclusaoBloqueada("beneficio") });
+      return;
+    }
+    const excluidos = await beneficioModel.excluir(id);
     if (!excluidos) {
       res.status(404).json({ erro: "Benefício não encontrado" });
       return;
