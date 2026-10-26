@@ -70,10 +70,10 @@ export const usuarioController = {
   
     const id = await usuarioModel.criar({
       nome: valNome.valor,
-      email: valEmail,
-      senha: valSenha,
-      perfil_id,
-    status: status ?? "ATIVO",
+      email: valEmail.valor,
+      senha: valSenha.valor,
+      perfil_id: idPerfil,
+    status: valStatus.valor ?? "ATIVO",
   });
 
     const novo = await usuarioModel.buscarPorId(id);
