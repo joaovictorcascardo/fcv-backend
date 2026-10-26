@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { usuarioModel } from "../models/usuarioModel";
-import { validarId } from "../utils/validacoes";
+import { validarId, validarNomeUsuario } from "../utils/validacoes";
 
 export const usuarioController = {
   async listar(req: Request, res: Response) {
@@ -23,7 +23,22 @@ export const usuarioController = {
   },
 
   async criar(req: Request, res: Response) {
-    const id = await usuarioModel.criar(req.body);
+    const { nome, email, senha, perfil_id, status } = req.body ?? {};
+
+    const valNome = validarNomeUsuario(nome);
+    if (valNome.erro) {
+      res.status(valNome.status).json({ erro: valNome.erro });
+      return;
+    }
+    
+    const id = await usuarioModel.criar({
+      nome: valNome.valor,
+      email,
+      senha,
+      perfil_id,
+    status: status ?? "ATIVO",
+  });
+
     const novo = await usuarioModel.buscarPorId(id);
     res.status(201).json(novo);
   },
