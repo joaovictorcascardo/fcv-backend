@@ -143,6 +143,14 @@ export const perfilAcessoController = {
       res.status(404).json({ erro: "Perfil de acesso não encontrado" });
       return;
     }
+
+    const totalUsuarios = await perfilAcessoModel.contarUsuariosVinculados(id);
+    if (totalUsuarios > 0) {
+      res.status(409).json({
+        erro: "Não é possível excluir: existem usuários vinculados a este perfil. Inative o perfil alterando seu status para INATIVO.",
+      });
+      return;
+    }
     
     await perfilAcessoModel.excluir(id);
     res.status(204).send();
