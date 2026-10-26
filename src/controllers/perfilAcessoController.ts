@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { perfilAcessoModel } from "../models/perfilAcessoModel";
+import { validarId } from "../utils/validacoes";
 
 export const perfilAcessoController = {
   async listar(req: Request, res: Response) {
@@ -8,7 +9,13 @@ export const perfilAcessoController = {
   },
 
   async buscar(req: Request, res: Response) {
-    const item = await perfilAcessoModel.buscarPorId(Number(req.params.id));
+    const id = validarId(req.params.id);
+    if (!id) {
+      res.status(400).json({ erro: "ID inválido. Informe um número inteiro positivo" });
+      return;
+    }
+
+    const item = await perfilAcessoModel.buscarPorId(id);
     if (!item) {
       res.status(404).json({ erro: "Perfil de acesso não encontrado" });
       return;
