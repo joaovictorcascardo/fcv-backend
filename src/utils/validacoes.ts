@@ -47,3 +47,17 @@ export function validarCNPJ(cnpj: unknown): boolean {
   return cnpj.replace(/\D/g, "").length === 14;
 }
 
+//Validações dos Usários
+
+export function validarNomeUsuario(nome: unknown) {
+  if (!nome || typeof nome !== "string" || !nome.trim()) {
+    return { erro: "Informe o nome do usuário", status: 400 };
+  }
+  const formatado = nome.trim();
+  if (formatado.length > 150) {
+    return { erro: "O nome do usuário não pode ter mais de 150 caracteres", status: 400 };
+  }
+  return { valor: formatado };
+}
+
+
