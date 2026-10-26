@@ -49,3 +49,36 @@ Authorization: Bearer {{token}}
 # 409: a oferta de campanha 1 tem utilizações registradas
 DELETE {{api}}/ofertas-campanha/1
 Authorization: Bearer {{token}}
+
+###
+# 400: oferta de campanha não aceita beneficio_id (use /ofertas)
+POST {{api}}/ofertas-campanha
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "beneficio_campanha_id": 1,
+  "conveniado_id": 1,
+  "beneficio_id": 1
+}
+
+###
+# 409: o conveniado 2 já oferece o item 1
+POST {{api}}/ofertas-campanha
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "beneficio_campanha_id": 1,
+  "conveniado_id": 2
+}
+
+###
+# 409: a oferta de campanha 1 tem utilizações, não pode trocar de conveniado
+PUT {{api}}/ofertas-campanha/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "conveniado_id": 1
+}
