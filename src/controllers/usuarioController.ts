@@ -163,11 +163,24 @@ export const usuarioController = {
   },
 
   async excluir(req: Request, res: Response) {
-    const excluidos = await usuarioModel.excluir(Number(req.params.id));
-    if (!excluidos) {
+    const id = validarId(req.params.id);
+    if (!id) {
+      res.status(400).json({ erro: "ID inválido. Informe um número inteiro positivo" });
+      return;
+    }
+    const usuario = await usuarioModel.buscarPorId(id);
+    if (!usuario) {
       res.status(404).json({ erro: "Usuário não encontrado" });
       return;
     }
+    const vinculos = await usuarioModel.contarVinculos(id);
+    if (vinculos.colaboradores > 0 || vinculos.conveniados > 0) {
+      res.status(409).json({
+        erro: "Não é possível excluir usuário com colaborador ou conveniado vinculado. Inative o usuário alterando seu status para INATIVO",
+      });
+      return;
+    }
+    await usuarioModel.excluir(id);
     res.status(204).send();
   },
 };
