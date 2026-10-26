@@ -114,3 +114,14 @@ export function validarSetor(setor: unknown) {
   }
   return { valor: limpo };
 }
+
+export function validarCargo(cargo: unknown) {
+  if (!cargo || typeof cargo !== "string" || !cargo.trim()) {
+    return { erro: "Informe o cargo do colaborador", status: 400 };
+  }
+  const limpo = cargo.trim();
+  if (limpo.length > 100) {
+    return { erro: "O cargo não pode ter mais de 100 caracteres", status: 400 };
+  }
+  return { valor: limpo };
+}
