@@ -43,7 +43,7 @@ const parametroId = {
   name: "id",
   in: "path",
   required: true,
-  schema: { type: "integer" },
+  schema: { type: "integer", minimum: 1 },
 };
 
 type Recurso = {
@@ -142,7 +142,12 @@ function crud({ caminho, tag, nome, schema, exemplo, naoEncontrado: mensagem, so
       get: {
         tags: [tag],
         summary: `Mostra ${nome.toLowerCase()}`,
-        responses: { 200: { description: "Registro encontrado", ...json(ref) }, 404: naoEncontrado, ...leitura },
+        responses: {
+          200: { description: "Registro encontrado", ...json(ref) },
+          400: { description: "ID inválido", ...erro("ID inválido. Informe um número inteiro positivo") },
+          404: naoEncontrado,
+          ...leitura,
+        },
       },
       put: {
         tags: [tag],
@@ -151,8 +156,9 @@ function crud({ caminho, tag, nome, schema, exemplo, naoEncontrado: mensagem, so
         requestBody: corpo(false),
         responses: {
           200: { description: "Registro atualizado", ...json(ref) },
-          400: { description: "Nenhum campo enviado ou valor inválido", ...erro("Nenhum campo enviado para atualizar") },
+          400: { description: "Nenhum campo enviado, ID inválido ou valor inválido", ...erro("Nenhum dado válido fornecido para atualização") },
           404: naoEncontrado,
+          409: { description: "Valor único repetido", ...erro("Já existe um registro com esse valor") },
           ...escrita,
         },
       },
@@ -161,6 +167,7 @@ function crud({ caminho, tag, nome, schema, exemplo, naoEncontrado: mensagem, so
         summary: `Exclui ${nome.toLowerCase()}`,
         responses: {
           204: { description: "Registro excluído" },
+          400: { description: "ID inválido", ...erro("ID inválido. Informe um número inteiro positivo") },
           404: naoEncontrado,
           409: { description: "Há registros ligados a este", ...erro("Não é possível excluir: há outros registros ligados a este") },
           ...escrita,
@@ -212,7 +219,7 @@ const schemas = {
     {
       nome: texto(150),
       email: { type: "string", format: "email", maxLength: 150 },
-      senha: { type: "string", writeOnly: true },
+      senha: { type: "string", minLength: 6, writeOnly: true },
       perfil_id: inteiro,
       status: opcoes(["ATIVO", "INATIVO"], "ATIVO"),
     },
@@ -239,7 +246,7 @@ const schemas = {
       nome_fantasia: texto(150),
       razao_social: texto(150),
       categoria: texto(60),
-      cnpj: { type: "string", maxLength: 14, description: "Só os 14 dígitos" },
+      cnpj: { type: "string", minLength: 14, maxLength: 14, description: "Exatamente 14 dígitos numéricos" },
       endereco: texto(255),
       status: opcoes(["ATIVO", "INATIVO", "EM_ANALISE"], "EM_ANALISE"),
     },
@@ -348,6 +355,7 @@ const recursos: Recurso[] = [
     schema: "Perfil",
     soFcv: true,
     soAdministrador: true,
+    observacao: "O nome do perfil deve ser único. Perfis com usuários vinculados não podem ser excluídos, devendo ser inativados.",
     exemplo: { nome: "FCV_ESTAGIARIO", escopo: "FCV", descricao: "Só consulta", permissoes: ["consultar"] },
   },
   {
@@ -358,7 +366,7 @@ const recursos: Recurso[] = [
     schema: "Usuario",
     soFcv: true,
     soAdministrador: true,
-    observacao: "A senha é criptografada antes de ser salva e nunca volta na resposta.",
+    observacao: "O e-mail deve ser único e a senha ter no mínimo 6 caracteres (criptografada antes de salvar e omitida nas respostas). Usuários vinculados a colaborador ou conveniado não podem ser excluídos.",
     exemplo: { nome: "Maria Lima", email: "maria@fcv.org.br", senha: "123456", perfil_id: 3 },
   },
   {
@@ -368,7 +376,7 @@ const recursos: Recurso[] = [
     nome: "Colaborador",
     schema: "Colaborador",
     soFcv: true,
-    observacao: "Crie antes o usuário (POST /usuarios com perfil de colaborador) e use o id dele em usuario_id.",
+    observacao: "Crie antes o usuário (POST /usuarios com perfil de colaborador) e use o id dele em usuario_id. Matrícula e usuario_id são únicos. Colaboradores com histórico de utilizações não podem ser excluídos.",
     exemplo: { usuario_id: 9, matricula: "FCV0100", setor: "Farmácia hospitalar", cargo: "Farmacêutica", data_admissao: "2026-09-01", telefone: "32988887777" },
   },
   {
@@ -377,7 +385,7 @@ const recursos: Recurso[] = [
     tag: "Conveniados",
     nome: "Conveniado",
     schema: "Conveniado",
-    observacao: "Crie antes o usuário (POST /usuarios com perfil de conveniado) e use o id dele em usuario_id.",
+    observacao: "Crie antes o usuário (POST /usuarios com perfil de conveniado) e use o id dele em usuario_id. CNPJ (14 dígitos) e usuario_id são únicos. Conveniados com benefícios ou campanhas vinculados não podem ser excluídos.",
     exemplo: { usuario_id: 10, nome_fantasia: "Padaria Pão Bom", razao_social: "Pão Bom Alimentos Ltda", categoria: "Alimentação", cnpj: "44555666000154", endereco: "Rua Barão do Monte Alto, 300, Muriaé" },
   },
   {
