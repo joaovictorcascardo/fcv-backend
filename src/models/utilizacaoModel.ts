@@ -88,7 +88,26 @@ export const utilizacaoModel = {
     return db(TABELA).where({ id }).update(dados);
   },
 
-  excluir(id: number) {
-    return db(TABELA).where({ id }).del();
+  // Só muda o status se ele ainda for o mesmo que foi lido (evita cancelar duas vezes).
+  cancelar(id: number, statusAtual: string, novoStatus: string, observacoes: string) {
+    return db(TABELA)
+      .where({ id, status: statusAtual })
+      .update({ status: novoStatus, observacoes });
   },
 };
+
+// Utilização nunca é apagada: o DELETE encerra o uso mudando o status.
+const statusDoCancelamento: Record<string, string> = {
+  PENDENTE: "REPROVADA",
+  APROVADA: "ESTORNADA",
+};
+
+export const OBSERVACAO_CANCELAMENTO = "Cancelada pela FCV";
+
+export function statusAoCancelar(status: string): string | null {
+  return statusDoCancelamento[status] ?? null;
+}
+
+export function observacaoAoCancelar(observacoes?: string | null) {
+  return observacoes ? `${observacoes}\n${OBSERVACAO_CANCELAMENTO}` : OBSERVACAO_CANCELAMENTO;
+}

@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { utilizacaoModel } from "../models/utilizacaoModel";
+import { observacaoAoCancelar, statusAoCancelar, utilizacaoModel } from "../models/utilizacaoModel";
 
 export const utilizacaoController = {
   async listar(req: Request, res: Response) {
@@ -33,12 +33,24 @@ export const utilizacaoController = {
     res.json(atualizado);
   },
 
-  async excluir(req: Request, res: Response) {
-    const excluidos = await utilizacaoModel.excluir(Number(req.params.id));
-    if (!excluidos) {
+  async cancelar(req: Request, res: Response) {
+    const id = Number(req.params.id);
+    const item = await utilizacaoModel.buscarPorId(id);
+    if (!item) {
       res.status(404).json({ erro: "Utilização não encontrada" });
       return;
     }
-    res.status(204).send();
+    const novoStatus = statusAoCancelar(item.status);
+    if (!novoStatus) {
+      res.status(409).json({ erro: `Utilização já encerrada (status ${item.status}): não pode ser cancelada` });
+      return;
+    }
+    const alterados = await utilizacaoModel.cancelar(id, item.status, novoStatus, observacaoAoCancelar(item.observacoes));
+    if (!alterados) {
+      res.status(409).json({ erro: "O status da utilização mudou durante o cancelamento. Consulte de novo" });
+      return;
+    }
+    const cancelado = await utilizacaoModel.buscarPorId(id);
+    res.json(cancelado);
   },
 };
