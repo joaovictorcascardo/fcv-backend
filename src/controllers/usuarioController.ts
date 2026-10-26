@@ -110,7 +110,7 @@ export const usuarioController = {
         res.status(valEmail.status).json({ erro: valEmail.erro });
         return;
       }
-      if (valEmail.valor !== usuarioAtual.email) {
+    if (valEmail.valor !== usuarioAtual.email) {
         const emailEmUso = await usuarioModel.buscarPorEmail(valEmail.valor!);
         if (emailEmUso) {
           res.status(409).json({ erro: "Já existe um usuário com esse e-mail" });
@@ -118,6 +118,14 @@ export const usuarioController = {
         }
       }
       dadosAtualizar.email = valEmail.valor;
+    }
+    if (req.body?.senha !== undefined) {
+      const valSenha = validarSenha(req.body.senha);
+      if (valSenha.erro) {
+        res.status(valSenha.status).json({ erro: valSenha.erro });
+        return;
+      }
+      dadosAtualizar.senha = valSenha.valor;
     }
   },
 
