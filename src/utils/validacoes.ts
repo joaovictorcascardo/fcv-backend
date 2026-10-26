@@ -125,3 +125,19 @@ export function validarCargo(cargo: unknown) {
   }
   return { valor: limpo };
 }
+
+export function validarDataAdmissao(data: unknown) {
+  if (!data || typeof data !== "string" || !data.trim()) {
+    return { erro: "Informe a data de admissão no formato AAAA-MM-DD", status: 400 };
+  }
+  const limpo = data.trim();
+  const regex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!regex.test(limpo)) {
+    return { erro: "Data de admissão inválida. Use o formato AAAA-MM-DD", status: 400 };
+  }
+  const d = new Date(limpo + "T00:00:00Z");
+  if (isNaN(d.getTime())) {
+    return { erro: "Data de admissão inválida no calendário", status: 400 };
+  }
+  return { valor: limpo };
+}
