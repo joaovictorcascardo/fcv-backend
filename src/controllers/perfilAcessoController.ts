@@ -126,7 +126,7 @@ export const perfilAcessoController = {
     if (descricao !== undefined) dadosAtualizar.descricao = descricao;
     if (permissoes !== undefined) dadosAtualizar.permissoes = permissoes;
 
-    await perfilAcessoModel.atualizar(id, req.body);
+    await perfilAcessoModel.atualizar(id, dadosAtualizar);
     const atualizado = await perfilAcessoModel.buscarPorId(id);
     res.json(atualizado);
   },
