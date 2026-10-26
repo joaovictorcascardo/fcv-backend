@@ -132,11 +132,13 @@ export const perfilAcessoController = {
   },
 
   async excluir(req: Request, res: Response) {
-    const excluidos = await perfilAcessoModel.excluir(Number(req.params.id));
-    if (!excluidos) {
-      res.status(404).json({ erro: "Perfil de acesso não encontrado" });
+    const id = validarId(req.params.id);
+    if (!id) {
+      res.status(400).json({ erro: "ID inválido. Informe um número inteiro positivo" });
       return;
     }
+    
+    await perfilAcessoModel.excluir(id);
     res.status(204).send();
   },
 };
