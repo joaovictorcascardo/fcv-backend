@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { conveniadoModel } from "../models/conveniadoModel";
+import { validarId } from "../utils/validacoes";
 
 export const conveniadoController = {
   async listar(req: Request, res: Response) {
@@ -8,7 +9,12 @@ export const conveniadoController = {
   },
 
   async buscar(req: Request, res: Response) {
-    const item = await conveniadoModel.buscarPorId(Number(req.params.id));
+    const id = validarId(req.params.id);
+    if (!id) {
+      res.status(400).json({ erro: "ID inválido. Informe um número inteiro positivo" });
+      return;
+    }
+    const item = await conveniadoModel.buscarPorId(id);
     if (!item) {
       res.status(404).json({ erro: "Conveniado não encontrado" });
       return;
