@@ -1,0 +1,126 @@
+@api = http://localhost:3333/api/v1
+###
+# @name loginAdmin
+POST {{api}}/auth/login
+Content-Type: application/json
+{
+}
+"email": "admin@fcv.org.br",
+"senha": "123456"
+###
+@tokenAdmin = {{loginAdmin.response.body.$.token}}
+###
+# @name loginOperador
+POST {{api}}/auth/login
+Content-Type: application/json
+{
+}
+"email": "operador@fcv.org.br",
+"senha": "123456"
+###
+@tokenOperador = {{loginOperador.response.body.$.token}}
+###
+GET {{api}}/usuarios
+Authorization: Bearer {{tokenOperador}}
+###
+GET {{api}}/perfis/1
+Authorization: Bearer {{tokenOperador}}
+###
+POST {{api}}/usuarios
+Authorization: Bearer {{tokenOperador}}
+Content-Type: application/json
+{
+}
+"nome": "Teste Operador",
+"email": "teste.operador@fcv.org.br",
+"senha": "123456",
+"perfil_id": 3
+###
+PUT {{api}}/usuarios/3
+Authorization: Bearer {{tokenOperador}}
+Content-Type: application/json
+{
+}
+"nome": "Carla Alterada"
+###
+PUT {{api}}/perfis/2
+Authorization: Bearer {{tokenOperador}}
+Content-Type: application/json
+{
+}
+"descricao": "Tentativa do operador"
+###
+DELETE {{api}}/perfis/4
+Authorization: Bearer {{tokenOperador}}
+###
+GET {{api}}/colaboradores
+Authorization: Bearer {{tokenOperador}}
+###
+PUT {{api}}/perfis/2
+Authorization: Bearer {{tokenAdmin}}
+Content-Type: application/json
+{
+}
+"descricao": "Equipe operacional: cadastros, campanhas e utilizações"
+###
+POST {{api}}/auth/login
+Content-Type: application/json
+{
+}
+"email": "elisa@fcv.org.br",
+"senha": "123456"
+###
+POST {{api}}/auth/login
+Content-Type: application/json
+{
+}
+"email": "otica@parceiro.com",
+"senha": "123456"
+###
+POST {{api}}/auth/login
+Content-Type: application/json
+{
+}
+"email": "fabio@fcv.org.br",
+"senha": "123456"
+###
+# @name loginDiego
+POST {{api}}/auth/login
+Content-Type: application/json
+{
+}
+"email": "diego@fcv.org.br",
+"senha": "123456"
+###
+@tokenDiego = {{loginDiego.response.body.$.token}}
+###
+GET {{api}}/auth/eu
+Authorization: Bearer {{tokenDiego}}
+###
+PUT {{api}}/colaboradores/2
+Authorization: Bearer {{tokenAdmin}}
+Content-Type: application/json
+{
+}
+"status": "AFASTADO"
+###
+GET {{api}}/auth/eu
+Authorization: Bearer {{tokenDiego}}
+###
+GET {{api}}/beneficios
+Authorization: Bearer {{tokenDiego}}
+###
+PUT {{api}}/colaboradores/2
+Authorization: Bearer {{tokenAdmin}}
+Content-Type: application/json
+{
+}
+"status": "ATIVO"
+###
+GET {{api}}/auth/eu
+Authorization: Bearer {{tokenDiego}}
+###
+GET {{api}}/auth/eu
+###
+GET {{api}}/auth/eu
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJpZCI6MX0.assinaturafalsa

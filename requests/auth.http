@@ -68,13 +68,13 @@ Content-Type: application/json
 }
 
 ###
+@codigo = troque-pelo-codigo-que-apareceu-no-terminal-da-api
+###
 POST {{api}}/auth/redefinir-senha
 Content-Type: application/json
-
 {
-  "email": "carla@fcv.org.br",
-  "codigo": "000000",
-  "nova_senha": "nova123"
+"email": "carla@fcv.org.br",
+"codigo": "{{codigo}}",
 }
 
 ###
