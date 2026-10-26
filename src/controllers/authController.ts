@@ -42,7 +42,8 @@ export const authController = {
       },
     );
     delete usuario.senha;
-    res.json({ token, usuario });
+    const dados = await acessoModel.buscarDados(usuario.id);
+    res.json({ token, usuario: { ...usuario, ...dados } });
   },
   async eu(req: Request, res: Response) {
     const usuario = await acessoModel.buscarPorId(res.locals.usuario.id);
@@ -51,7 +52,8 @@ export const authController = {
       return;
     }
     delete usuario.senha;
-    res.json(usuario);
+    const dados = await acessoModel.buscarDados(usuario.id);
+    res.json({ ...usuario, ...dados });
   },
   async esqueciSenha(req: Request, res: Response) {
     const { email } = req.body ?? {};

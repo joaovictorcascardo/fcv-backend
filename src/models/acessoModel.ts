@@ -20,6 +20,11 @@ export const acessoModel = {
     buscarPorEmail(email: string) {
         return buscarComVinculos().where("usuario.email", email).first();
     },
+    async buscarDados(usuarioId: number) {
+        const colaborador = await db("colaborador").where({ usuario_id: usuarioId }).first();
+        const conveniado = await db("conveniado").where({ usuario_id: usuarioId }).first();
+        return { colaborador: colaborador ?? null, conveniado: conveniado ?? null };
+    },
 };
 export function motivoBloqueio(usuario: any) {
     if (usuario.status !== "ATIVO") {
