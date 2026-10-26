@@ -92,8 +92,17 @@ export const usuarioController = {
       res.status(404).json({ erro: "Usuário não encontrado" });
       return;
     }
-    
+
     const dadosAtualizar: Record<string, any> = {};
+    
+    if (req.body?.nome !== undefined) {
+      const valNome = validarNomeUsuario(req.body.nome);
+      if (valNome.erro) {
+        res.status(valNome.status).json({ erro: valNome.erro });
+        return;
+      }
+      dadosAtualizar.nome = valNome.valor;
+    }
   },
 
   async excluir(req: Request, res: Response) {
