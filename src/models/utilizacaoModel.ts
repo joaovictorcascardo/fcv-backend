@@ -76,6 +76,10 @@ export const utilizacaoModel = {
     return db(TABELA).where({ id }).first();
   },
 
+  buscarPorToken(token: string) {
+    return db(TABELA).where({ token_qrcode: token }).first();
+  },
+
   async criar(dados: any) {
     if (!dados.token_qrcode) {
       dados.token_qrcode = randomUUID();
