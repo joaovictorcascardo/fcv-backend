@@ -1,0 +1,68 @@
+@api = http://localhost:3333/api/v1
+
+###
+# @name loginColaborador
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "carla@fcv.org.br",
+  "senha": "123456"
+}
+
+###
+@colaborador = {{loginColaborador.response.body.$.token}}
+
+###
+GET {{api}}/eu/utilizacoes
+Authorization: Bearer {{colaborador}}
+
+###
+GET {{api}}/eu/utilizacoes?status=APROVADA
+Authorization: Bearer {{colaborador}}
+
+###
+GET {{api}}/eu/utilizacoes?de=2026-10-02&ate=2026-10-02
+Authorization: Bearer {{colaborador}}
+
+###
+GET {{api}}/eu/utilizacoes?status=XX
+Authorization: Bearer {{colaborador}}
+
+###
+GET {{api}}/eu/utilizacoes?de=02/10/2026
+Authorization: Bearer {{colaborador}}
+
+###
+# @name loginConveniado
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "farmacia@parceiro.com",
+  "senha": "123456"
+}
+
+###
+@conveniado = {{loginConveniado.response.body.$.token}}
+
+###
+GET {{api}}/eu/utilizacoes
+Authorization: Bearer {{conveniado}}
+
+###
+# @name loginAdmin
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@fcv.org.br",
+  "senha": "123456"
+}
+
+###
+@admin = {{loginAdmin.response.body.$.token}}
+
+###
+GET {{api}}/eu/utilizacoes
+Authorization: Bearer {{admin}}

@@ -1,6 +1,7 @@
 
 import db from "../database/db";
 import { listarRecurso } from "../queries/recursos";
+import { contarUtilizacoes } from "./historicoModel";
 
 const TABELA = "beneficio";
 
@@ -20,6 +21,10 @@ export const beneficioModel = {
 
   atualizar(id: number, dados: any) {
     return db(TABELA).where({ id }).update(dados);
+  },
+
+  contarUtilizacoes(id: number) {
+    return contarUtilizacoes("beneficio", id);
   },
 
   excluir(id: number) {
