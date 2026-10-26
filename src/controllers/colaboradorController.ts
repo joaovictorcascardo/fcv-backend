@@ -109,12 +109,87 @@ export const colaboradorController = {
   },
 
   async atualizar(req: Request, res: Response) {
-    const id = Number(req.params.id);
-    const alterados = await colaboradorModel.atualizar(id, req.body);
-    if (!alterados) {
+    const id = validarId(req.params.id);
+    if (!id) {
+      res.status(400).json({ erro: "ID inválido. Informe um número inteiro positivo" });
+      return;
+    }
+
+    const colaboradorAtual = await colaboradorModel.buscarPorId(id);
+    if (!colaboradorAtual) {
       res.status(404).json({ erro: "Colaborador não encontrado" });
       return;
     }
+
+    const dadosAtualizar: Record<string, any> = {};
+
+    if (req.body?.matricula !== undefined) {
+      const valMatricula = validarMatricula(req.body.matricula);
+      if (valMatricula.erro) {
+        res.status(valMatricula.status).json({ erro: valMatricula.erro });
+        return;
+      }
+      if (valMatricula.valor !== colaboradorAtual.matricula) {
+        const matriculaEmUso = await colaboradorModel.buscarPorMatricula(valMatricula.valor!);
+        if (matriculaEmUso) {
+          res.status(409).json({ erro: "Já existe um colaborador com essa matrícula" });
+          return;
+        }
+      }
+      dadosAtualizar.matricula = valMatricula.valor;
+    }
+
+    if (req.body?.setor !== undefined) {
+      const valSetor = validarSetor(req.body.setor);
+      if (valSetor.erro) {
+        res.status(valSetor.status).json({ erro: valSetor.erro });
+        return;
+      }
+      dadosAtualizar.setor = valSetor.valor;
+    }
+
+    if (req.body?.cargo !== undefined) {
+      const valCargo = validarCargo(req.body.cargo);
+      if (valCargo.erro) {
+        res.status(valCargo.status).json({ erro: valCargo.erro });
+        return;
+      }
+      dadosAtualizar.cargo = valCargo.valor;
+    }
+
+    if (req.body?.data_admissao !== undefined) {
+      const valData = validarDataAdmissao(req.body.data_admissao);
+      if (valData.erro) {
+        res.status(valData.status).json({ erro: valData.erro });
+        return;
+      }
+      dadosAtualizar.data_admissao = valData.valor;
+    }
+
+    if (req.body?.status !== undefined) {
+      const valStatus = validarStatusColaborador(req.body.status);
+      if (valStatus.erro) {
+        res.status(valStatus.status).json({ erro: valStatus.erro });
+        return;
+      }
+      dadosAtualizar.status = valStatus.valor;
+    }
+
+    if (req.body?.telefone !== undefined) {
+      const valTelefone = validarTelefone(req.body.telefone);
+      if (valTelefone.erro) {
+        res.status(valTelefone.status).json({ erro: valTelefone.erro });
+        return;
+      }
+      dadosAtualizar.telefone = valTelefone.valor;
+    }
+
+    if (Object.keys(dadosAtualizar).length === 0) {
+      res.status(400).json({ erro: "Nenhum dado válido fornecido para atualização" });
+      return;
+    }
+
+    await colaboradorModel.atualizar(id, dadosAtualizar);
     const atualizado = await colaboradorModel.buscarPorId(id);
     res.json(atualizado);
   },
