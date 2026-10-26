@@ -27,6 +27,8 @@ const VALOR_MAXIMO = 99999999.99;
 
 const falha = (erro: string) => ({ erro, status: 400 });
 
+export const MENSAGEM_ID_INVALIDO = "ID inválido. Informe um número inteiro positivo";
+
 // Mesma regra do validarId do utilitário de cadastros.
 export function validarId(id: unknown): number | null {
   const numero = Number(id);
