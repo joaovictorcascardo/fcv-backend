@@ -81,14 +81,19 @@ export const usuarioController = {
   },
 
   async atualizar(req: Request, res: Response) {
-    const id = Number(req.params.id);
-    const alterados = await usuarioModel.atualizar(id, req.body);
-    if (!alterados) {
+    const id = validarId(req.params.id);
+    if (!id) {
+      res.status(400).json({ erro: "ID inválido. Informe um número inteiro positivo" });
+      return;
+    }
+
+    const usuarioAtual = await usuarioModel.buscarPorId(id);
+    if (!usuarioAtual) {
       res.status(404).json({ erro: "Usuário não encontrado" });
       return;
     }
-    const atualizado = await usuarioModel.buscarPorId(id);
-    res.json(atualizado);
+    
+    const dadosAtualizar: Record<string, any> = {};
   },
 
   async excluir(req: Request, res: Response) {
