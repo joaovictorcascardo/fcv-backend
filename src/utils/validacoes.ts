@@ -141,3 +141,23 @@ export function validarDataAdmissao(data: unknown) {
   }
   return { valor: limpo };
 }
+
+export function validarStatusColaborador(status: unknown) {
+  if (status === undefined) return {};
+  if (!STATUS_COLABORADOR_VALIDOS.includes(status as any)) {
+    return { erro: "Status inválido. Opções permitidas: ATIVO, INATIVO, AFASTADO", status: 400 };
+  }
+  return { valor: status };
+}
+
+export function validarTelefone(telefone: unknown) {
+  if (telefone === undefined || telefone === null || telefone === "") return { valor: null };
+  if (typeof telefone !== "string") {
+    return { erro: "Telefone inválido", status: 400 };
+  }
+  const limpo = telefone.trim();
+  if (limpo.length > 20) {
+    return { erro: "O telefone não pode ter mais de 20 caracteres", status: 400 };
+  }
+  return { valor: limpo };
+}
