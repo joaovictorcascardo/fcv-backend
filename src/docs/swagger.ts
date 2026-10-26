@@ -335,6 +335,16 @@ const schemas = {
       data_criacao: dataHora,
       perfil: { type: "string", example: "FCV_ADMIN" },
       escopo: opcoes(["FCV", "COLABORADOR", "CONVENIADO"]),
+      colaborador: {
+        allOf: [{ $ref: "#/components/schemas/Colaborador" }],
+        nullable: true,
+        description: "Preenchido quando o escopo é COLABORADOR",
+      },
+      conveniado: {
+        allOf: [{ $ref: "#/components/schemas/Conveniado" }],
+        nullable: true,
+        description: "Preenchido quando o escopo é CONVENIADO",
+      },
     },
   },
 };
