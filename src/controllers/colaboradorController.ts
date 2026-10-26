@@ -195,11 +195,27 @@ export const colaboradorController = {
   },
 
   async excluir(req: Request, res: Response) {
-    const excluidos = await colaboradorModel.excluir(Number(req.params.id));
-    if (!excluidos) {
+    const id = validarId(req.params.id);
+    if (!id) {
+      res.status(400).json({ erro: "ID inválido. Informe um número inteiro positivo" });
+      return;
+    }
+
+    const colaborador = await colaboradorModel.buscarPorId(id);
+    if (!colaborador) {
       res.status(404).json({ erro: "Colaborador não encontrado" });
       return;
     }
+
+    const totalUtilizacoes = await colaboradorModel.contarUtilizacoes(id);
+    if (totalUtilizacoes > 0) {
+      res.status(409).json({
+        erro: "Não é possível excluir colaborador com histórico de utilizações vinculado. Inative o colaborador alterando seu status para INATIVO",
+      });
+      return;
+    }
+
+    await colaboradorModel.excluir(id);
     res.status(204).send();
   },
 };
