@@ -25,11 +25,18 @@ const erro = (mensagem: string) => ({
 
 const respostasComuns = {
   401: { description: "Token não enviado, inválido ou expirado", ...erro("Token não enviado") },
+  403: {
+    description: "Usuário, perfil ou vínculo inativo. O acesso é conferido no banco a cada requisição",
+    ...erro("Colaborador inativo ou afastado")
+  },
 };
 
 const respostasFcv = {
   ...respostasComuns,
-  403: { description: "Usuário sem escopo FCV", ...erro("Seu perfil não tem acesso a esta rota") },
+  403: { description: "Usuário sem escopo FCV, ou usuário, perfil ou vínculo inativo", ...erro("Seu perfil não tem acesso a esta rota") },
+};
+const respostasAdministrador = {
+  ...respostasComuns, 403: { description: "Só o perfil FCV_ADMINISTRADOR cria, altera e exclui", ...erro("Seu perfil não tem permissão para esta ação") },
 };
 
 const parametroId = {
@@ -47,6 +54,7 @@ type Recurso = {
   exemplo: object;
   naoEncontrado: string;
   soFcv?: boolean;
+  soAdministrador?: boolean;
   observacao?: string;
 };
 
@@ -64,18 +72,18 @@ function parametrosListagem(caminho: string) {
       filtro.tipo === "data" ? config.periodo ?? "Dia no formato YYYY-MM-DD; intervalo inclusivo." : "Filtro de igualdade, combinado por AND com os demais filtros.",
       filtro.tipo === "inteiro" ? { type: "integer", minimum: 1, maximum: Number.MAX_SAFE_INTEGER }
         : filtro.tipo === "enum" ? { type: "string", enum: [...(filtro.valores ?? [])] }
-        : filtro.tipo === "data" ? { type: "string", format: "date" }
-        : { type: "string", minLength: 1, maxLength: 150 },
+          : filtro.tipo === "data" ? { type: "string", format: "date" }
+            : { type: "string", minLength: 1, maxLength: 150 },
     )),
   ];
 }
 
-function crud({ caminho, tag, nome, schema, exemplo, naoEncontrado: mensagem, soFcv, observacao }: Recurso) {
+function crud({ caminho, tag, nome, schema, exemplo, naoEncontrado: mensagem, soFcv, soAdministrador, observacao }: Recurso) {
   const ref = { $ref: `#/components/schemas/${schema}` };
   const refEntrada = { $ref: `#/components/schemas/${schema}Entrada` };
   const refAlteracao = { $ref: `#/components/schemas/${schema}Alteracao` };
   const leitura = soFcv ? respostasFcv : respostasComuns;
-  const escrita = respostasFcv;
+  const escrita = soAdministrador ? respostasAdministrador : respostasFcv;
   const naoEncontrado = { description: "Não existe registro com esse id", ...erro(mensagem) };
   const corpo = (exigirObrigatorios: boolean) => ({
     required: true,
@@ -100,13 +108,17 @@ function crud({ caminho, tag, nome, schema, exemplo, naoEncontrado: mensagem, so
         responses: {
           200: {
             description: "Array legado ou envelope quando pagina/limite é enviado",
-            ...json({ oneOf: [
-              { type: "array", items: ref },
-              { type: "object", required: ["dados", "paginacao"], properties: {
-                dados: { type: "array", items: ref },
-                paginacao: { $ref: "#/components/schemas/Paginacao" },
-              } },
-            ] }),
+            ...json({
+              oneOf: [
+                { type: "array", items: ref },
+                {
+                  type: "object", required: ["dados", "paginacao"], properties: {
+                    dados: { type: "array", items: ref },
+                    paginacao: { $ref: "#/components/schemas/Paginacao" },
+                  }
+                },
+              ]
+            }),
           },
           400: { description: "Parâmetro de consulta inválido", ...erro("limite deve estar entre 1 e 100") },
           ...leitura,
@@ -335,6 +347,7 @@ const recursos: Recurso[] = [
     nome: "Perfil",
     schema: "Perfil",
     soFcv: true,
+    soAdministrador: true,
     exemplo: { nome: "FCV_ESTAGIARIO", escopo: "FCV", descricao: "Só consulta", permissoes: ["consultar"] },
   },
   {
@@ -344,6 +357,7 @@ const recursos: Recurso[] = [
     nome: "Usuário",
     schema: "Usuario",
     soFcv: true,
+    soAdministrador: true,
     observacao: "A senha é criptografada antes de ser salva e nunca volta na resposta.",
     exemplo: { nome: "Maria Lima", email: "maria@fcv.org.br", senha: "123456", perfil_id: 3 },
   },
@@ -465,7 +479,11 @@ export const documentacao = {
           },
           400: { description: "E-mail ou senha não enviados", ...erro("Informe e-mail e senha") },
           401: { description: "E-mail ou senha incorretos", ...erro("E-mail ou senha incorretos") },
-          403: { description: "Usuário inativo", ...erro("Usuário inativo") },
+          403: {
+            description:
+              "Conta bloqueada: usuário ou perfil INATIVO, colaborador INATIVO ou AFASTADO, conveniado INATIVO ou EM_ANALISE",
+            ...erro("Colaborador inativo ou afastado"),
+          },
         },
       },
     },
@@ -546,10 +564,8 @@ export const documentacao = {
     "/auth/esqueci-senha": {
       post: {
         tags: ["Autenticação"],
-        summary: "Gera um código para trocar a senha",
-        description:
-          "Gera um código de 6 dígitos que vale 15 minutos. Ainda não há envio por e-mail: o código volta na resposta. Use-o em POST /auth/redefinir-senha.",
-        security: [],
+        summary: "Pede um código para trocar a senha", description:
+          "Gera um código de 6 dígitos que vale 15 minutos e invalida os anteriores. A resposta é sempre a mesma, exista ou não o e-mail, e nunca traz o código. Enquanto não há envio por e-mail, o código aparece só no terminal da API (fora de produção). No máximo 3 códigos por hora para o mesmo usuário.", security: [],
         requestBody: {
           required: true,
           content: {
@@ -561,21 +577,22 @@ export const documentacao = {
         },
         responses: {
           200: {
-            description: "Código gerado",
+            description: "Pedido recebido",
             content: {
               "application/json": {
                 schema: {
                   type: "object",
                   properties: {
-                    mensagem: { type: "string", example: "Código gerado. Ele vale 15 minutos" },
-                    codigo: { type: "string", example: "482913" },
+                    mensagem: {
+                      type: "string",
+                      example: "Se o e-mail estiver cadastrado, um código foi enviado. Ele vale 15 minutos",
+                    },
                   },
                 },
               },
             },
           },
           400: { description: "E-mail não enviado", ...erro("Informe o e-mail") },
-          404: { description: "E-mail não cadastrado", ...erro("E-mail não encontrado") },
         },
       },
     },
@@ -606,7 +623,10 @@ export const documentacao = {
               },
             },
           },
-          400: { description: "Campos faltando ou código errado, expirado ou já usado", ...erro("Código inválido ou expirado") },
+          400: {
+            description: "Campos faltando ou código errado, expirado, já usado ou com 5 tentativas erradas",
+            ...erro("Código inválido ou expirado"),
+          },
         },
       },
     },
