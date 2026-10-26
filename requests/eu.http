@@ -25,6 +25,22 @@ Authorization: Bearer {{colaborador}}
 GET {{api}}/eu/utilizacoes?de=2026-10-02&ate=2026-10-02
 Authorization: Bearer {{colaborador}}
 
+### Histórico paginado: o total continua restrito ao colaborador autenticado
+GET {{api}}/eu/utilizacoes?pagina=1&limite=20&ordenarPor=data_solicitacao&ordem=desc
+Authorization: Bearer {{colaborador}}
+
+### 400: data inexistente no calendário
+GET {{api}}/eu/utilizacoes?ate=2026-02-30
+Authorization: Bearer {{colaborador}}
+
+### 400: período invertido
+GET {{api}}/eu/utilizacoes?de=2026-10-26&ate=2026-10-01
+Authorization: Bearer {{colaborador}}
+
+### 400: o dono não pode ser substituído por um parâmetro
+GET {{api}}/eu/utilizacoes?colaborador_id=2&limite=1
+Authorization: Bearer {{colaborador}}
+
 ###
 GET {{api}}/eu/utilizacoes?status=XX
 Authorization: Bearer {{colaborador}}
@@ -62,6 +78,14 @@ Content-Type: application/json
 
 ###
 @admin = {{loginAdmin.response.body.$.token}}
+
+### Benefício comum: beneficio_id não é o ID de uma oferta
+GET {{api}}/utilizacoes?beneficio_id=1&pagina=1&limite=20
+Authorization: Bearer {{admin}}
+
+### Item promocional: ID de uma entidade distinta do benefício comum
+GET {{api}}/utilizacoes?beneficio_campanha_id=1&pagina=1&limite=20
+Authorization: Bearer {{admin}}
 
 ###
 GET {{api}}/eu/utilizacoes

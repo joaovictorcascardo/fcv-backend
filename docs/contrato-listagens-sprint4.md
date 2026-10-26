@@ -2,7 +2,7 @@
 
 Esta entrega trata de **S4-01 (contrato com web e mobile)** e **S4-07 (filtros, ordenação e paginação no servidor)**. O backend continua usando Express, TypeScript, Knex e MySQL. Não altera CSS ou telas do portal.
 
-**Situação da integração:** a implementação está preparada para revisão local. O aceite do contrato pelos Grupos 1 (web) e 2 (mobile) continua pendente. A matriz de acesso definitiva depende do trabalho de Heitor; as consultas pessoais do aplicativo dependem do trabalho de Thales. A criação deste documento não representa confirmação de Samuel C. no Notion.
+**Situação da integração:** consultas, autenticação, catálogo e cadastros foram integrados na `develop`. As correções da auditoria acrescentam paginação ao histórico próprio, filtros por benefício e validações descritas em [correcoes-auditoria-sprint4.md](correcoes-auditoria-sprint4.md). O aceite dos contratos pelos Grupos 1 (web) e 2 (mobile) continua pendente; este documento não representa confirmação de participação no Notion.
 
 ## 1. Dois formatos, sem truncamento silencioso
 
@@ -72,7 +72,7 @@ Os filtros textuais específicos, como `nome`, `setor` e `categoria`, usam **igu
 | `campanhas` | nome, descrição, patrocinador | `nome`, `patrocinador`, `tipo`, `status`, `dataInicio`, `dataFim` | `id`, `nome`, `tipo`, `status`, `data_inicio`, `data_fim` |
 | `itens-campanha` | nome, descrição | `campanha_id`, `nome`, `tipo_beneficio`, `status` | `id`, `nome`, `valor`, `campanha_id`, `status` |
 | `ofertas-campanha` | Não possui; enviar `busca` resulta em 400 | `beneficio_campanha_id`, `conveniado_id`, `status` | `id`, `beneficio_campanha_id`, `conveniado_id`, `status` |
-| `utilizacoes` | Não possui; enviar `busca` resulta em 400 | `colaborador_id`, `beneficio_conveniado_id`, `beneficio_campanha_conveniado_id`, `status`, `canal_validacao`, `origem`, `conveniado_id`, `dataInicio`, `dataFim` | `id`, `data_solicitacao`, `data_confirmacao`, `valor_aplicado`, `status` |
+| `utilizacoes` | Não possui; enviar `busca` resulta em 400 | `colaborador_id`, `beneficio_id`, `beneficio_campanha_id`, `beneficio_conveniado_id`, `beneficio_campanha_conveniado_id`, `status`, `canal_validacao`, `origem`, `conveniado_id`, `dataInicio`, `dataFim` | `id`, `data_solicitacao`, `data_confirmacao`, `valor_aplicado`, `status` |
 
 Enumerações:
 
@@ -98,19 +98,21 @@ Datas aceitas vão de `1000-01-01` a `9999-12-31`, respeitando a faixa suportada
 - Em campanhas, o período seleciona campanhas que **se sobrepõem** à consulta: o início da campanha não pode ser depois de `dataFim`, e o fim da campanha não pode ser antes de `dataInicio`.
 - Nome e e-mail do colaborador pertencem ao usuário vinculado. A busca/ordenação usa relacionamento controlado e mantém os campos de resposta do colaborador.
 - Ofertas comuns e ofertas de campanha são entidades distintas. Filtros de utilizações que atravessam esses relacionamentos devem respeitar a FK correspondente; IDs iguais não tornam as duas ofertas equivalentes.
+- `beneficio_id` filtra o benefício da oferta comum; `beneficio_campanha_id` filtra o item promocional da oferta de campanha. São filtros distintos combinados por AND; não são IDs de ofertas. Não enviar ambos para tentar consultar as duas origens por OR.
 - A consulta filtrada é a base tanto dos registros quanto da contagem. Um filtro de autorização acrescentado pelo servidor precisa restringir essa base **antes** de contar e paginar. Query string, corpo e contagem nunca devem ampliar o acesso.
 - Usuários continuam sem senha/hash na resposta. A busca não passa a expor colunas de autenticação.
 
 ## 4. Acesso atual e matriz proposta para revisão
 
-### Comportamento herdado nesta entrega
+### Comportamento implementado no backend
 
 | Coleções | Leitura | Criação/alteração/exclusão |
 | --- | --- | --- |
-| `perfis`, `usuarios`, `colaboradores`, `utilizacoes` | JWT com escopo FCV | JWT com escopo FCV |
+| `perfis`, `usuarios` | JWT com escopo FCV | Somente perfil `FCV_ADMINISTRADOR` ativo |
+| `colaboradores`, `utilizacoes` | JWT com escopo FCV | JWT com escopo FCV |
 | `conveniados`, `beneficios`, `ofertas`, `campanhas`, `itens-campanha`, `ofertas-campanha` | Qualquer escopo autenticado | JWT com escopo FCV |
 
-O parser das buscas não substitui `autenticar`/`permitir` e não cria novas permissões. Esse comportamento herdado **não equivale** à autorização completa dos requisitos. Não afirmar que a paginação, sozinha, implementou consultas pessoais ou restrição por proprietário.
+O parser das buscas não substitui `autenticar`/`permitir` e não cria novas permissões. O middleware confere no banco os estados atuais do usuário, perfil e vínculo. O histórico pessoal usa `/eu/utilizacoes`, com dono derivado da autenticação; não aceita IDs de dono enviados na query.
 
 ### Contrato de acesso desejado, pendente de revisão e integração
 
@@ -121,7 +123,7 @@ O parser das buscas não substitui `autenticar`/`permitir` e não cria novas per
 | Colaborador | Cadastro/histórico próprios e leituras de catálogo aprovadas; sem listas internas globais. |
 | Conveniado | Cadastro/histórico do estabelecimento autenticado e leituras aprovadas; sem consultar outro estabelecimento. |
 
-Heitor precisa fechar papéis, permissões e estados atuais do usuário/perfil/vínculo. Thales precisa fechar os serviços pessoais com o Grupo 2. Grupo 1 e Grupo 2 precisam revisar os DTOs mínimos e exemplos de consumo antes do aceite de S4-01.
+As implementações de papéis, estados atuais e serviços pessoais estão integradas. Grupo 1 e Grupo 2 precisam homologar os DTOs e exemplos de consumo antes do aceite de S4-01.
 
 O resultado esperado de integração é: sem token/token inválido/expirado, **401**; usuário autenticado sem permissão, **403**. Os parâmetros inválidos geram **400** depois dos controles de acesso. Os erros seguem `{ "erro": "Mensagem em português" }`.
 
@@ -169,7 +171,7 @@ Roteiro de revisão:
 
 ## 7. Contribuição e integração no Git
 
-Trabalhe em uma branch individual baseada em `develop`. Commits podem ser criados localmente; enviar a branch exige permissão de escrita no repositório. A implementação de consultas usa `feat/samuel-c-consultas` e aguarda revisão e integração pela equipe. Não integrar à `main` diretamente.
+Trabalhe em uma branch individual baseada em `develop`. Commits podem ser criados localmente; enviar a branch exige permissão de escrita no repositório. A implementação original de consultas foi integrada a partir de `feat/samuel-c-consultas`; novas mudanças seguem o mesmo fluxo de PR para `develop`. Não integrar à `main` diretamente.
 
 Para quem vai começar em uma **nova cópia limpa**, o fluxo normal é:
 
@@ -208,8 +210,7 @@ Abra PR com **base `develop`** e compare `feat/samuel-c-consultas`. Outro integr
 ## 8. Pendências que esta entrega não encerra
 
 - Aceite do contrato e da matriz pelos Grupos 1 e 2.
-- Papéis de administrador/operador, revisão dos estados atuais e recuperação de senha: Heitor.
-- CRUD/validação de payloads e senhas: Samuel S.
-- Preservação de histórico, catálogo e consultas pessoais: Thales.
+- Homologação das escritas de administrador/operador, estados atuais e recuperação de senha pelos consumidores.
+- Homologação dos payloads, vínculos do perfil, histórico próprio e modo paginado no web/mobile.
 - Regras de saldo, renovação, QR e decisão dos benefícios: etapa posterior definida pela Sprint 4.
 - Confirmação individual e data/hora no Notion: preenchimento pelo próprio integrante após verificar a entrega.

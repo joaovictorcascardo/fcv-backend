@@ -1,5 +1,6 @@
 import { recursosListagem, type NomeRecursoListagem } from "../queries/recursos";
 import type { ConfiguracaoListagem } from "../queries/listagem";
+import { configuracaoHistorico } from "../queries/historico";
 import { mensagemExclusaoBloqueada } from "../models/historicoModel";
 
 const texto = (maxLength: number) => ({ type: "string", maxLength });
@@ -67,16 +68,23 @@ type Recurso = {
 
 function parametrosListagem(caminho: string) {
   const config: ConfiguracaoListagem & { periodo?: string } = recursosListagem[caminho.slice(1) as NomeRecursoListagem];
+  return parametrosConsulta(config);
+}
+
+function parametrosConsulta(config: ConfiguracaoListagem & { periodo?: string }) {
   const parametro = (name: string, description: string, schema: object) => ({ name, in: "query", required: false, description, schema });
   return [
     parametro("pagina", "Ativa o formato paginado. Inteiro positivo; padrão 1 quando pagina ou limite é enviado.", { type: "integer", minimum: 1 }),
     parametro("limite", "Ativa o formato paginado. Entre 1 e 100; padrão 20 quando pagina ou limite é enviado.", { type: "integer", minimum: 1, maximum: 100 }),
-    parametro("ordenarPor", "Campo permitido; id é usado como desempate. Não aceita expressão SQL.", { type: "string", enum: Object.keys(config.ordenarPor), default: "id" }),
-    parametro("ordem", "Sentido da ordenação principal. Desempate por id crescente.", { type: "string", enum: ["asc", "desc"], default: "asc" }),
+    parametro("ordenarPor", "Campo permitido; id é usado como desempate. Não aceita expressão SQL.", { type: "string", enum: Object.keys(config.ordenarPor), default: config.padrao?.ordenarPor ?? "id" }),
+    parametro("ordem", "Sentido da ordenação principal. Desempate por id crescente.", { type: "string", enum: ["asc", "desc"], default: config.padrao?.ordem ?? "asc" }),
     ...(config.busca?.length ? [parametro("busca", "Substring literal nos campos textuais permitidos. % e _ são literais.", { type: "string", minLength: 1, maxLength: 150 })] : []),
     ...Object.entries(config.filtros ?? {}).map(([nome, filtro]) => parametro(
       nome,
-      filtro.tipo === "data" ? config.periodo ?? "Dia no formato YYYY-MM-DD; intervalo inclusivo." : "Filtro de igualdade, combinado por AND com os demais filtros.",
+      filtro.tipo === "data" ? config.periodo ?? "Dia no formato YYYY-MM-DD; intervalo inclusivo."
+        : nome === "beneficio_id" ? "ID do benefício comum. Não inclui item promocional de mesmo ID; combinado por AND com os demais filtros."
+          : nome === "beneficio_campanha_id" ? "ID do item promocional. Não inclui benefício comum de mesmo ID; combinado por AND com os demais filtros."
+            : "Filtro de igualdade, combinado por AND com os demais filtros.",
       filtro.tipo === "inteiro" ? { type: "integer", minimum: 1, maximum: Number.MAX_SAFE_INTEGER }
         : filtro.tipo === "enum" ? { type: "string", enum: [...(filtro.valores ?? [])] }
           : filtro.tipo === "data" ? { type: "string", format: "date" }
@@ -222,7 +230,8 @@ const schemas = {
   },
   Erro: {
     type: "object",
-    properties: { erro: textoLivre, detalhe: textoLivre },
+    required: ["erro"],
+    properties: { erro: textoLivre },
   },
   ...modelo(
     "Perfil",
@@ -582,6 +591,7 @@ export const documentacao = {
       get: {
         tags: ["Autenticação"],
         summary: "Dados de quem está logado",
+        description: "Preserva os campos do usuário e devolve somente o vínculo correspondente ao escopo atual: colaborador para COLABORADOR, conveniado para CONVENIADO; os demais vínculos são null. As projeções são explícitas e a senha nunca é retornada.",
         responses: {
           200: {
             description: "Usuário do token",
@@ -691,6 +701,7 @@ export const documentacao = {
       post: {
         tags: ["Autenticação"],
         summary: "Troca a senha usando o código",
+        description: "O consumo é transacional: requisições simultâneas com o mesmo código têm no máximo um sucesso. A troca de senha e a invalidação dos códigos são confirmadas juntas. Tentativas inválidas contam para o limite de cinco.",
         security: [],
         requestBody: {
           required: true,
@@ -726,27 +737,26 @@ export const documentacao = {
         tags: ["Meus dados"],
         summary: "Histórico de utilizações de quem está logado",
         description:
-          "Colaborador recebe as utilizações que ele fez. Conveniado recebe as feitas no estabelecimento dele. Mais recentes primeiro. Escopo FCV recebe 403: ela usa GET /utilizacoes.",
-        parameters: [
-          {
-            name: "status",
-            in: "query",
-            required: false,
-            schema: opcoes(["PENDENTE", "APROVADA", "REPROVADA", "ESTORNADA"]),
-          },
-          { name: "de", in: "query", required: false, description: "Data inicial (AAAA-MM-DD)", schema: data },
-          { name: "ate", in: "query", required: false, description: "Data final, o dia inteiro entra (AAAA-MM-DD)", schema: data },
-        ],
+          "Colaborador recebe somente suas utilizações; conveniado somente as do estabelecimento autenticado. Sem pagina/limite preserva array completo; enviar qualquer um ativa o envelope. Padrão: data_solicitacao desc, desempate por id asc. O mesmo dono e os mesmos filtros restringem os dados e o total. IDs de dono na query não são aceitos. Escopo FCV recebe 403 e usa GET /utilizacoes.",
+        parameters: parametrosConsulta({ ...configuracaoHistorico, periodo: "Dia válido de 1000-01-01 a 9999-12-31, no formato AAAA-MM-DD. de não pode superar ate; inclui todo o dia final." }),
         responses: {
           200: {
-            description: "Lista de utilizações",
+            description: "Array completo ou envelope paginado explícito, preservando os campos das utilizações",
             content: {
               "application/json": {
-                schema: { type: "array", items: { $ref: "#/components/schemas/UtilizacaoDoUsuario" } },
+                schema: {
+                  oneOf: [
+                    { type: "array", items: { $ref: "#/components/schemas/UtilizacaoDoUsuario" } },
+                    { type: "object", required: ["dados", "paginacao"], properties: {
+                      dados: { type: "array", items: { $ref: "#/components/schemas/UtilizacaoDoUsuario" } },
+                      paginacao: { $ref: "#/components/schemas/Paginacao" },
+                    } },
+                  ],
+                },
               },
             },
           },
-          400: { description: "status ou data em formato errado", ...erro("de e ate devem estar no formato AAAA-MM-DD") },
+          400: { description: "Query desconhecida, estruturada, repetida, paginação/ordenação inválida, data inexistente ou intervalo invertido", ...erro("de não pode ser posterior a ate") },
           ...respostasComuns,
           403: {
             description: "Escopo FCV, ou usuário, perfil ou vínculo inativo",
