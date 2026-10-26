@@ -142,6 +142,15 @@ export const usuarioController = {
 
       dadosAtualizar.perfil_id = idPerfil;
     }
+
+    if (req.body?.status !== undefined) {
+      const valStatus = validarStatusUsuario(req.body.status);
+      if (valStatus.erro) {
+        res.status(valStatus.status).json({ erro: valStatus.erro });
+        return;
+      }
+      dadosAtualizar.status = valStatus.valor;
+    }
   },
 
   async excluir(req: Request, res: Response) {
