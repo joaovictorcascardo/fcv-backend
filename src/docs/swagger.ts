@@ -324,6 +324,27 @@ const schemas = {
     ["colaborador_id", "valor_aplicado"],
     { data_solicitacao: dataHora },
   ),
+  UtilizacaoDoUsuario: {
+    type: "object",
+    properties: {
+      id: inteiro,
+      status: opcoes(["PENDENTE", "APROVADA", "REPROVADA", "ESTORNADA"]),
+      valor_aplicado: decimal,
+      canal_validacao: opcional(opcoes(["APP_CONVENIADO", "TERMINAL_IOT"])),
+      data_solicitacao: dataHora,
+      data_confirmacao: opcional(dataHora),
+      observacoes: opcional(textoLivre),
+      origem: opcoes(["BENEFICIO", "CAMPANHA"]),
+      beneficio_id: { ...inteiro, nullable: true, description: "Preenchido quando a origem é BENEFICIO" },
+      item_campanha_id: { ...inteiro, nullable: true, description: "Preenchido quando a origem é CAMPANHA" },
+      beneficio_nome: textoLivre,
+      conveniado_id: inteiro,
+      conveniado_nome_fantasia: textoLivre,
+      conveniado_categoria: textoLivre,
+      conveniado_endereco: textoLivre,
+      colaborador_nome: textoLivre,
+    },
+  },
   UsuarioLogado: {
     type: "object",
     properties: {
@@ -455,7 +476,7 @@ export const documentacao = {
   },
   servers: [{ url: "/api/v1" }],
   security: [{ bearerAuth: [] }],
-  tags: [{ name: "Autenticação" }, ...recursos.map((r) => ({ name: r.tag }))],
+  tags: [{ name: "Autenticação" }, { name: "Meus dados" }, ...recursos.map((r) => ({ name: r.tag }))],
   paths: {
     "/auth/login": {
       post: {
@@ -636,6 +657,44 @@ export const documentacao = {
           400: {
             description: "Campos faltando ou código errado, expirado, já usado ou com 5 tentativas erradas",
             ...erro("Código inválido ou expirado"),
+          },
+        },
+      },
+    },
+    "/eu/utilizacoes": {
+      get: {
+        tags: ["Meus dados"],
+        summary: "Histórico de utilizações de quem está logado",
+        description:
+          "Colaborador recebe as utilizações que ele fez. Conveniado recebe as feitas no estabelecimento dele. Mais recentes primeiro. Escopo FCV recebe 403: ela usa GET /utilizacoes.",
+        parameters: [
+          {
+            name: "status",
+            in: "query",
+            required: false,
+            schema: opcoes(["PENDENTE", "APROVADA", "REPROVADA", "ESTORNADA"]),
+          },
+          { name: "de", in: "query", required: false, description: "Data inicial (AAAA-MM-DD)", schema: data },
+          { name: "ate", in: "query", required: false, description: "Data final, o dia inteiro entra (AAAA-MM-DD)", schema: data },
+        ],
+        responses: {
+          200: {
+            description: "Lista de utilizações",
+            content: {
+              "application/json": {
+                schema: { type: "array", items: { $ref: "#/components/schemas/UtilizacaoDoUsuario" } },
+              },
+            },
+          },
+          400: { description: "status ou data em formato errado", ...erro("de e ate devem estar no formato AAAA-MM-DD") },
+          ...respostasComuns,
+          403: {
+            description: "Escopo FCV, ou usuário, perfil ou vínculo inativo",
+            ...erro("Seu perfil não tem acesso a esta rota"),
+          },
+          404: {
+            description: "Usuário sem cadastro de colaborador ou conveniado",
+            ...erro("Cadastro de colaborador ou conveniado não encontrado"),
           },
         },
       },

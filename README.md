@@ -105,6 +105,7 @@ Resumo das rotas (todas começam com `/api/v1`):
 | `/itens-campanha` | Ver: usuário logado. Criar, alterar e excluir: escopo FCV | Benefícios que fazem parte de uma campanha |
 | `/ofertas-campanha` | Ver: usuário logado. Criar, alterar e excluir: escopo FCV | Qual conveniado oferece qual item de campanha |
 | `/utilizacoes` | Escopo FCV | Cada uso de um benefício, com token do QR Code e status |
+| `/eu/utilizacoes` | Colaborador e conveniado logados | Histórico de quem está logado, com filtros `status`, `de` e `ate` |
 
 Fora o `/auth`, todas têm as cinco operações: `GET /rota` lista, `GET /rota/:id` mostra um, `POST /rota` cria, `PUT /rota/:id` altera (envie só os campos que mudaram) e `DELETE /rota/:id` exclui.
 
