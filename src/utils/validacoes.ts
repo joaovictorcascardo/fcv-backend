@@ -5,8 +5,11 @@ export const STATUS_USUARIO_VALIDOS = ["ATIVO", "INATIVO"] as const;
 export const STATUS_COLABORADOR_VALIDOS = ["ATIVO", "INATIVO", "AFASTADO"] as const;
 
 export function validarId(id: unknown): number | null {
+  if (typeof id !== "number" && (typeof id !== "string" || !/^\d+$/.test(id.trim()))) {
+    return null;
+  }
   const numero = Number(id);
-  if (!Number.isInteger(numero) || numero <= 0) {
+  if (!Number.isSafeInteger(numero) || numero <= 0) {
     return null;
   }
   return numero;
@@ -21,6 +24,24 @@ export function validarNomePerfil(nome: unknown) {
     return { erro: "O nome do perfil não pode ter mais de 50 caracteres", status: 400 };
   }
   return { valor: formatado };
+}
+
+export function validarDescricaoPerfil(descricao: unknown) {
+  if (descricao === undefined) return {};
+  if (descricao === null) return { valor: null };
+  if (typeof descricao !== "string" || descricao.length > 255) {
+    return { erro: "A descrição do perfil deve ser um texto com até 255 caracteres ou null", status: 400 };
+  }
+  return { valor: descricao };
+}
+
+export function validarPermissoesPerfil(permissoes: unknown) {
+  if (permissoes === undefined) return {};
+  if (permissoes === null) return { valor: null };
+  if (!Array.isArray(permissoes) || !permissoes.every((permissao) => typeof permissao === "string")) {
+    return { erro: "As permissões do perfil devem ser uma lista de textos ou null", status: 400 };
+  }
+  return { valor: permissoes as string[] };
 }
 
 export function validarEscopo(escopo: unknown) {
@@ -135,8 +156,9 @@ export function validarDataAdmissao(data: unknown) {
   if (!regex.test(limpo)) {
     return { erro: "Data de admissão inválida. Use o formato AAAA-MM-DD", status: 400 };
   }
-  const d = new Date(limpo + "T00:00:00Z");
-  if (isNaN(d.getTime())) {
+  const [ano, mes, dia] = limpo.split("-").map(Number);
+  const d = new Date(Date.UTC(ano, mes - 1, dia));
+  if (ano < 1000 || d.getUTCFullYear() !== ano || d.getUTCMonth() !== mes - 1 || d.getUTCDate() !== dia) {
     return { erro: "Data de admissão inválida no calendário", status: 400 };
   }
   return { valor: limpo };

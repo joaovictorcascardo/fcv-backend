@@ -7,6 +7,7 @@ import { after, before, describe, test } from "node:test";
 import knex, { type Knex } from "knex";
 import mysql, { type Connection } from "mysql2/promise";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
 import { criarBaseListagem, recursosListagem, type NomeRecursoListagem } from "../src/queries/recursos";
 import { listarComConsulta } from "../src/queries/listagem";
 
@@ -78,6 +79,16 @@ describe("listagens HTTP com MySQL real em banco novo e isolado", { skip: !habil
   async function get(caminho: string, token: string | null = tokenFcv) {
     const resposta = await fetch(`${endereco}/${caminho}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
     return { status: resposta.status, corpo: await resposta.json() as any };
+  }
+
+  async function escrever(metodo: "POST" | "PUT" | "DELETE", caminho: string, dados?: unknown, token: string | null = tokenFcv) {
+    const resposta = await fetch(`${endereco}/${caminho}`, {
+      method: metodo,
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      ...(dados === undefined ? {} : { body: JSON.stringify(dados) }),
+    });
+    const texto = await resposta.text();
+    return { status: resposta.status, corpo: texto ? JSON.parse(texto) as Registro : {} };
   }
 
   for (const nome of nomes) {
@@ -204,13 +215,248 @@ describe("listagens HTTP com MySQL real em banco novo e isolado", { skip: !habil
     for (const nome of nomes) assert.equal((await get(`${nome}?pagina=1`, null)).status, 401, nome);
     for (const nome of rotasFcv) assert.equal((await get(`${nome}?pagina=1`, tokenColaborador)).status, 403, nome);
     assert.equal((await get("beneficios?pagina=1", "token-invalido")).status, 401);
-    // Esta suíte verifica os guards existentes; papéis/admin e estados atuais são a entrega de Heitor.
+  });
+
+  test("histórico próprio pagina somente o colaborador autenticado, preserva legado e ordena com desempate", async () => {
+    const legado = await get("eu/utilizacoes", tokenColaborador);
+    assert.equal(legado.status, 200);
+    assert.deepEqual(legado.corpo.map((r: Registro) => r.id), [2, 1]);
+    for (const [pagina, esperado] of [[1, [2]], [2, [1]], [3, []]] as const) {
+      const resposta = await get(`eu/utilizacoes?pagina=${pagina}&limite=1`, tokenColaborador);
+      assert.equal(resposta.status, 200);
+      assert.deepEqual(resposta.corpo.dados.map((r: Registro) => r.id), esperado);
+      assert.deepEqual(resposta.corpo.paginacao, { pagina, limite: 1, total: 2, totalPaginas: 2 });
+    }
+    const ascendente = await get("eu/utilizacoes?ordenarPor=id&ordem=asc", tokenColaborador);
+    assert.deepEqual(ascendente.corpo.map((r: Registro) => r.id), [1, 2]);
+    const original = await banco!("utilizacao").where({ id: 1 }).first("data_solicitacao");
+    try {
+      await banco!("utilizacao").where({ id: 1 }).update({ data_solicitacao: "2026-10-24 23:59:59" });
+      const a = await get("eu/utilizacoes?pagina=1&limite=1", tokenColaborador);
+      const b = await get("eu/utilizacoes?pagina=2&limite=1", tokenColaborador);
+      assert.deepEqual(a.corpo.dados.map((r: Registro) => r.id), [1]);
+      assert.deepEqual(b.corpo.dados.map((r: Registro) => r.id), [2]);
+      assert.equal(a.corpo.paginacao.total, 2);
+    } finally {
+      await banco!("utilizacao").where({ id: 1 }).update({ data_solicitacao: original.data_solicitacao });
+    }
+  });
+
+  test("histórico do conveniado conta apenas o estabelecimento atual nas duas origens", async () => {
+    await banco!("perfil_acesso").where({ id: 3 }).update({ status: "ATIVO" });
+    const token = jwt.sign({ id: 4, escopo: "CONVENIADO" }, process.env.JWT_SEGREDO!, { expiresIn: "5m" });
+    try {
+      const legado = await get("eu/utilizacoes", token);
+      assert.equal(legado.status, 200);
+      assert.deepEqual(legado.corpo.map((r: Registro) => r.id), [1, 4]);
+      const pagina = await get("eu/utilizacoes?limite=1&ordenarPor=id&ordem=desc", token);
+      assert.equal(pagina.status, 200);
+      assert.deepEqual(pagina.corpo.dados.map((r: Registro) => r.id), [4]);
+      assert.equal(pagina.corpo.paginacao.total, 2);
+      const filtrada = await get("eu/utilizacoes?de=2026-10-24&ate=2026-10-24&limite=1", token);
+      assert.deepEqual(filtrada.corpo.dados.map((r: Registro) => r.id), [1]);
+      assert.equal(filtrada.corpo.paginacao.total, 1);
+    } finally {
+      await banco!("perfil_acesso").where({ id: 3 }).update({ status: "INATIVO" });
+    }
+  });
+
+  test("histórico próprio valida datas, intervalo, paginação e proíbe substituir o dono pela query", async () => {
+    for (const query of [
+      "ate=2026-02-30", "de=0999-12-31", "de=2026-10-25&ate=2026-10-24", "de=2026-10-24&de=2026-10-25",
+      "pagina=0", "limite=101", "status=ATIVO", "ordenarPor=senha", "ordem=SQL",
+      "colaborador_id=2", "conveniado_id=2", "desconhecido=1",
+    ]) {
+      const resposta = await get(`eu/utilizacoes?${query}`, tokenColaborador);
+      assert.equal(resposta.status, 400, query);
+      assert.equal(typeof resposta.corpo.erro, "string");
+    }
+    const dia = await get("eu/utilizacoes?de=2026-10-24&ate=2026-10-24&limite=100", tokenColaborador);
+    assert.equal(dia.status, 200);
+    assert.deepEqual(dia.corpo.dados.map((r: Registro) => r.id), [2, 1]);
+    assert.equal(dia.corpo.paginacao.total, 2);
+    const vazia = await get("eu/utilizacoes?status=APROVADA&limite=1", tokenColaborador);
+    assert.deepEqual(vazia.corpo, { dados: [], paginacao: { pagina: 1, limite: 1, total: 0, totalPaginas: 0 } });
+    assert.equal((await get("eu/utilizacoes", null)).status, 401);
+    assert.equal((await get("eu/utilizacoes", tokenFcv)).status, 403);
+  });
+
+  test("utilizações filtram benefício comum e item de campanha em espaços de IDs separados", async () => {
+    const comum = await get("utilizacoes?beneficio_id=1&limite=1");
+    assert.equal(comum.status, 200);
+    assert.deepEqual(comum.corpo.dados.map((r: Registro) => r.id), [1]);
+    assert.equal(comum.corpo.paginacao.total, 1);
+    const campanha = await get("utilizacoes?beneficio_campanha_id=1&limite=1");
+    assert.equal(campanha.status, 200);
+    assert.deepEqual(campanha.corpo.dados.map((r: Registro) => r.id), [2]);
+    assert.equal(campanha.corpo.paginacao.total, 1);
+    const combinada = await get("utilizacoes?beneficio_id=1&beneficio_campanha_id=1&limite=1");
+    assert.equal(combinada.status, 200);
+    assert.deepEqual(combinada.corpo.dados, []);
+    assert.equal(combinada.corpo.paginacao.total, 0);
+    assert.equal((await get("utilizacoes?beneficio_id=0")).status, 400);
+    assert.equal((await get("utilizacoes?beneficio_campanha_id=true")).status, 400);
+  });
+
+  test("CRUD de usuários rejeita senha vazia sem persistir usuário nem alterar hash", async () => {
+    const antes = await banco!("usuario").count({ total: "*" }).first();
+    const hash = (await banco!("usuario").where({ id: 2 }).first("senha")).senha;
+    const nova = await escrever("POST", "usuarios", { nome: "Entrada inválida", email: "senha-vazia@example.test", senha: "", perfil_id: 2 });
+    assert.equal(nova.status, 400);
+    const alteracao = await escrever("PUT", "usuarios/2", { senha: "" });
+    assert.equal(alteracao.status, 400);
+    assert.equal((await banco!("usuario").where({ id: 2 }).first("senha")).senha, hash);
+    assert.deepEqual(await banco!("usuario").count({ total: "*" }).first(), antes);
+  });
+
+  test("validação HTTP rejeita coerções de IDs e data de admissão inexistente", async () => {
+    const antes = await banco!("usuario").count({ total: "*" }).first();
+    for (const id of [true, [1], {}, Number.MAX_SAFE_INTEGER + 1, "1e0"]) {
+      const usuario = await escrever("POST", "usuarios", { nome: "ID inválido", email: "id-invalido@example.test", senha: "senha-teste-valida", perfil_id: id });
+      assert.equal(usuario.status, 400, JSON.stringify(id));
+      const oferta = await escrever("POST", "ofertas", { beneficio_id: id, conveniado_id: 1 });
+      assert.equal(oferta.status, 400, JSON.stringify(id));
+    }
+    const dataAntes = (await banco!("colaborador").where({ id: 1 }).first("data_admissao")).data_admissao;
+    const data = await escrever("PUT", "colaboradores/1", { data_admissao: "2026-02-30" });
+    assert.equal(data.status, 400);
+    assert.equal((await banco!("colaborador").where({ id: 1 }).first("data_admissao")).data_admissao, dataAntes);
+    assert.deepEqual(await banco!("usuario").count({ total: "*" }).first(), antes);
+  });
+
+  test("auth/eu preserva campos públicos e limita os vínculos ao escopo e ao DTO", async () => {
+    await banco!.schema.alterTable("colaborador", tabela => tabela.string("campo_interno_auditoria").nullable());
+    await banco!("colaborador").where({ id: 1 }).update({ campo_interno_auditoria: "não deve sair do banco" });
+    try {
+      const colab = await get("auth/eu", tokenColaborador);
+      assert.equal(colab.status, 200);
+      assert.equal(colab.corpo.id, 1);
+      assert.equal(colab.corpo.nome, "Ana");
+      assert.equal(colab.corpo.email, "fixture1@example.test");
+      assert.equal(colab.corpo.escopo, "COLABORADOR");
+      assert.equal(colab.corpo.status, "ATIVO");
+      assert.equal(colab.corpo.colaborador.matricula, "M1");
+      assert.equal(colab.corpo.colaborador.setor, "Ensino");
+      assert.equal(colab.corpo.colaborador.cargo, "Técnico");
+      assert.equal(colab.corpo.conveniado, null);
+      assert.ok(!Object.hasOwn(colab.corpo, "senha"));
+      assert.ok(!Object.hasOwn(colab.corpo.colaborador, "campo_interno_auditoria"));
+      await banco!("usuario").where({ id: 1 }).update({ perfil_id: 1 });
+      const fcvComVinculo = await get("auth/eu", tokenColaborador);
+      assert.equal(fcvComVinculo.status, 200);
+      assert.equal(fcvComVinculo.corpo.escopo, "FCV");
+      assert.equal(fcvComVinculo.corpo.colaborador, null);
+      assert.equal(fcvComVinculo.corpo.conveniado, null);
+      await banco!("perfil_acesso").where({ id: 3 }).update({ status: "ATIVO" });
+      const token = jwt.sign({ id: 4, escopo: "CONVENIADO" }, process.env.JWT_SEGREDO!, { expiresIn: "5m" });
+      const conv = await get("auth/eu", token);
+      assert.equal(conv.status, 200);
+      assert.equal(conv.corpo.colaborador, null);
+      assert.equal(conv.corpo.conveniado.id, 1);
+      assert.equal(conv.corpo.conveniado.nome_fantasia, "Loja 1");
+    } finally {
+      await banco!("usuario").where({ id: 1 }).update({ perfil_id: 2 });
+      await banco!("perfil_acesso").where({ id: 3 }).update({ status: "INATIVO" });
+      await banco!.schema.alterTable("colaborador", tabela => tabela.dropColumn("campo_interno_auditoria"));
+    }
+  });
+
+  test("erro real de duplicidade devolve 409 sem SQL, detalhe interno ou dado da consulta", async () => {
+    const resposta = await escrever("POST", "auth/registrar", {
+      nome: "Duplicado", email: "fixture1@example.test", senha: "senha-teste-valida", matricula: "MAT-DUPLICADA",
+      setor: "Ensino", cargo: "Técnico", data_admissao: "2026-01-10",
+    }, null);
+    assert.equal(resposta.status, 409);
+    assert.deepEqual(Object.keys(resposta.corpo), ["erro"]);
+    assert.doesNotMatch(JSON.stringify(resposta.corpo), /fixture1|insert into|sqlMessage|sqlState|ER_DUP_ENTRY|detalhe/i);
+  });
+
+  test("redefinição concorrente tem um vencedor e a senha final pertence a ele", async () => {
+    const email = "fixture2@example.test";
+    const codigo = "739152";
+    const senhas = ["nova-senha-teste-A", "nova-senha-teste-B"];
+    const original = (await banco!("usuario").where({ id: 2 }).first("senha")).senha;
+    await banco!("redefinicao_senha").where({ usuario_id: 2 }).delete();
+    await banco!("redefinicao_senha").insert({ usuario_id: 2, codigo: await bcrypt.hash(codigo, 10), expira_em: banco!.raw("DATE_ADD(NOW(), INTERVAL 15 MINUTE)") });
+    try {
+      const respostas = await Promise.all(senhas.map(nova_senha => escrever("POST", "auth/redefinir-senha", { email, codigo, nova_senha }, null)));
+      assert.deepEqual(respostas.map(r => r.status).sort(), [200, 400]);
+      const vencedor = respostas.findIndex(r => r.status === 200);
+      const salvo = (await banco!("usuario").where({ id: 2 }).first("senha")).senha;
+      assert.equal(await bcrypt.compare(senhas[vencedor], salvo), true);
+      assert.equal(await bcrypt.compare(senhas[1 - vencedor], salvo), false);
+      assert.equal(Number((await banco!("redefinicao_senha").where({ usuario_id: 2 }).first()).usado), 1);
+      const repetida = await escrever("POST", "auth/redefinir-senha", { email, codigo, nova_senha: "outra-senha-teste" }, null);
+      assert.equal(repetida.status, 400);
+      assert.equal((await banco!("usuario").where({ id: 2 }).first("senha")).senha, salvo);
+      const login = await escrever("POST", "auth/login", { email, senha: senhas[vencedor] }, null);
+      assert.equal(login.status, 200);
+      assert.equal(typeof login.corpo.token, "string");
+      assert.ok(!Object.hasOwn(login.corpo.usuario, "senha"));
+    } finally {
+      await banco!("usuario").where({ id: 2 }).update({ senha: original });
+      await banco!("redefinicao_senha").where({ usuario_id: 2 }).delete();
+    }
+  });
+
+  test("tentativas concorrentes inválidas respeitam o limite sem liberar um código bloqueado", async () => {
+    const original = (await banco!("usuario").where({ id: 2 }).first("senha")).senha;
+    await banco!("redefinicao_senha").where({ usuario_id: 2 }).delete();
+    await banco!("redefinicao_senha").insert({ usuario_id: 2, codigo: await bcrypt.hash("739152", 10), expira_em: banco!.raw("DATE_ADD(NOW(), INTERVAL 15 MINUTE)") });
+    try {
+      const respostas = await Promise.all(Array.from({ length: 6 }, () => escrever("POST", "auth/redefinir-senha", { email: "fixture2@example.test", codigo: "000000", nova_senha: "nova-senha-teste" }, null)));
+      assert.ok(respostas.every(r => r.status === 400));
+      const pedido = await banco!("redefinicao_senha").where({ usuario_id: 2 }).first();
+      assert.equal(pedido.tentativas, 5);
+      const correto = await escrever("POST", "auth/redefinir-senha", { email: "fixture2@example.test", codigo: "739152", nova_senha: "nova-senha-teste" }, null);
+      assert.equal(correto.status, 400);
+      assert.equal((await banco!("usuario").where({ id: 2 }).first("senha")).senha, original);
+    } finally {
+      await banco!("redefinicao_senha").where({ usuario_id: 2 }).delete();
+    }
+  });
+
+  test("permissões de escrita e estados atuais continuam validados após as correções", async () => {
+    await banco!("perfil_acesso").where({ id: 1 }).update({ nome: "FCV_OPERADOR" });
+    try {
+      assert.equal((await escrever("PUT", "usuarios/2", { nome: "Nome proibido" })).status, 403);
+      assert.equal((await escrever("POST", "perfis", { nome: "Perfil proibido", escopo: "FCV" })).status, 403);
+    } finally {
+      await banco!("perfil_acesso").where({ id: 1 }).update({ nome: "FCV_ADMINISTRADOR" });
+    }
+    await banco!("colaborador").where({ id: 1 }).update({ status: "AFASTADO" });
+    try {
+      assert.equal((await get("auth/eu", tokenColaborador)).status, 403);
+      assert.equal((await get("eu/utilizacoes?limite=1", tokenColaborador)).status, 403);
+    } finally {
+      await banco!("colaborador").where({ id: 1 }).update({ status: "ATIVO" });
+    }
+  });
+
+  test("cancelamento e exclusão de cadastro mantêm o histórico no MySQL", async () => {
+    for (const [id, esperado] of [[1, "REPROVADA"], [3, "ESTORNADA"]] as const) {
+      const antes = await banco!("utilizacao").where({ id }).first();
+      try {
+        const resposta = await escrever("DELETE", `utilizacoes/${id}`);
+        assert.equal(resposta.status, 200);
+        assert.equal(resposta.corpo.status, esperado);
+        const salvo = await banco!("utilizacao").where({ id }).first();
+        assert.equal(salvo.status, esperado);
+        assert.equal(salvo.token_qrcode, antes.token_qrcode);
+        assert.equal((await escrever("DELETE", `utilizacoes/${id}`)).status, 409);
+      } finally {
+        await banco!("utilizacao").where({ id }).update({ status: antes.status, observacoes: antes.observacoes });
+      }
+    }
+    assert.equal((await escrever("DELETE", "beneficios/1")).status, 409);
+    assert.ok(await banco!("beneficio").where({ id: 1 }).first());
+    assert.ok(await banco!("utilizacao").where({ id: 1 }).first());
   });
 });
 
 async function inserirFixtures(banco: Knex) {
   await banco("perfil_acesso").insert([
-    { id: 1, nome: "Administrador teste", escopo: "FCV", status: "ATIVO" },
+    { id: 1, nome: "FCV_ADMINISTRADOR", escopo: "FCV", status: "ATIVO" },
     { id: 2, nome: "Colaborador teste", escopo: "COLABORADOR", status: "ATIVO" },
     { id: 3, nome: "Conveniado teste", escopo: "CONVENIADO", status: "INATIVO" },
   ]);

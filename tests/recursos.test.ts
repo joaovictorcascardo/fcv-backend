@@ -94,3 +94,21 @@ test("cada recurso recusa status e filtros que pertencem a outra entidade", () =
   assert.throws(() => analisarConsulta({ colaborador_id: "1" }, recursosListagem.campanhas), ConsultaInvalida);
   assert.throws(() => analisarConsulta({ busca: "consulta" }, recursosListagem.ofertas), ConsultaInvalida);
 });
+
+test("utilizações: benefício comum e item promocional usam suas próprias relações nos dados e total", async () => {
+  for (const [filtro, coluna] of [
+    ["beneficio_id", "`oferta_comum`.`beneficio_id`"],
+    ["beneficio_campanha_id", "`oferta_campanha`.`beneficio_campanha_id`"],
+  ] as const) {
+    const { banco, consultas } = capturarConsultas();
+    try {
+      await listarRecurso(banco, "utilizacoes", { [filtro]: "7", status: "PENDENTE", pagina: "1" });
+      assert.equal(consultas.length, 2);
+      for (const sql of consultas) {
+        assert.ok(sql.sql.includes(coluna + " = ?"));
+        assert.deepEqual(sql.bindings.slice(0, 2), [7, "PENDENTE"]);
+      }
+      assert.throws(() => analisarConsulta({ [filtro]: "true" }, recursosListagem.utilizacoes), ConsultaInvalida);
+    } finally { await banco.destroy(); }
+  }
+});

@@ -1,9 +1,8 @@
 import { Request, Response } from "express";
 import { perfilAcessoModel } from "../models/perfilAcessoModel";
-import { validarEscopo, validarId, validarNomePerfil, validarStatusPerfil } from "../utils/validacoes";
+import { validarDescricaoPerfil, validarEscopo, validarId, validarNomePerfil, validarPermissoesPerfil, validarStatusPerfil } from "../utils/validacoes";
 
 const ESCOPOS_VALIDOS = ["FCV", "COLABORADOR", "CONVENIADO"] as const;
-const STATUS_VALIDOS = ["ATIVO", "INATIVO"] as const;
 
 export const perfilAcessoController = {
   async listar(req: Request, res: Response) {
@@ -43,8 +42,20 @@ export const perfilAcessoController = {
       return;
     }
 
-    if (status && !STATUS_VALIDOS.includes(status)) {
-      res.status(400).json({ erro: "Status inválido. Opções permitidas: ATIVO, INATIVO" });
+    const valStatus = validarStatusPerfil(status);
+    if (valStatus.erro) {
+      res.status(valStatus.status).json({ erro: valStatus.erro });
+      return;
+    }
+
+    const valDescricao = validarDescricaoPerfil(descricao);
+    if (valDescricao.erro) {
+      res.status(valDescricao.status).json({ erro: valDescricao.erro });
+      return;
+    }
+    const valPermissoes = validarPermissoesPerfil(permissoes);
+    if (valPermissoes.erro) {
+      res.status(valPermissoes.status).json({ erro: valPermissoes.erro });
       return;
     }
 
@@ -59,9 +70,9 @@ export const perfilAcessoController = {
     const dadosCriacao: Record<string, any> = {
       nome: nomeFormatado,
       escopo,
-      descricao: descricao ?? null,
-      permissoes: permissoes ?? null,
-      status: status ?? "ATIVO",
+      descricao: valDescricao.valor ?? null,
+      permissoes: valPermissoes.valor ?? null,
+      status: valStatus.valor ?? "ATIVO",
     };
 
     const id = await perfilAcessoModel.criar(dadosCriacao);
@@ -123,8 +134,22 @@ export const perfilAcessoController = {
       dadosAtualizar.status = valStatus.valor;
     }
 
-    if (descricao !== undefined) dadosAtualizar.descricao = descricao;
-    if (permissoes !== undefined) dadosAtualizar.permissoes = permissoes;
+    if (descricao !== undefined) {
+      const valDescricao = validarDescricaoPerfil(descricao);
+      if (valDescricao.erro) {
+        res.status(valDescricao.status).json({ erro: valDescricao.erro });
+        return;
+      }
+      dadosAtualizar.descricao = valDescricao.valor;
+    }
+    if (permissoes !== undefined) {
+      const valPermissoes = validarPermissoesPerfil(permissoes);
+      if (valPermissoes.erro) {
+        res.status(valPermissoes.status).json({ erro: valPermissoes.erro });
+        return;
+      }
+      dadosAtualizar.permissoes = valPermissoes.valor;
+    }
 
     await perfilAcessoModel.atualizar(id, dadosAtualizar);
     const atualizado = await perfilAcessoModel.buscarPorId(id);

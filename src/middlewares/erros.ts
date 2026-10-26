@@ -39,21 +39,26 @@ export function tratarErros(
     res.status(400).json({ erro: erro.message });
     return;
   }
-  const conhecido = errosConhecidos[erro.code];
+  const codigo = typeof erro?.code === "string" && Object.hasOwn(errosConhecidos, erro.code) ? erro.code : undefined;
+  const conhecido = codigo ? errosConhecidos[codigo] : undefined;
   if (conhecido) {
-    res
-      .status(conhecido[0])
-      .json({ erro: conhecido[1], detalhe: erro.sqlMessage });
+    // Nunca registrar o objeto bruto: SQL e mensagens do driver podem conter dados do usuário.
+    console.error("Erro de banco de dados", {
+      codigo,
+      ...(Number.isSafeInteger(erro.errno) ? { errno: erro.errno } : {}),
+      ...(typeof erro.sqlState === "string" && /^[A-Z0-9]{5}$/.test(erro.sqlState) ? { sqlState: erro.sqlState } : {}),
+    });
+    res.status(conhecido[0]).json({ erro: conhecido[1] });
     return;
   }
-  if (erro.type === "entity.parse.failed") {
+  if (erro?.type === "entity.parse.failed") {
     res.status(400).json({ erro: "O JSON enviado está mal formatado" });
     return;
   }
-  if (String(erro.message).includes("Empty .update()")) {
+  if (String(erro?.message).includes("Empty .update()")) {
     res.status(400).json({ erro: "Nenhum campo enviado para atualizar" });
     return;
   }
-  console.error(erro);
+  console.error("Erro interno no servidor", { categoria: "ERRO_NAO_TRATADO" });
   res.status(500).json({ erro: "Erro interno no servidor" });
 }

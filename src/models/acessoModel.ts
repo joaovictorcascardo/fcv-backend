@@ -5,7 +5,13 @@ function buscarComVinculos() {
         .leftJoin("colaborador", "colaborador.usuario_id", "usuario.id")
         .leftJoin("conveniado", "conveniado.usuario_id", "usuario.id")
         .select(
-            "usuario.*",
+            "usuario.id",
+            "usuario.nome",
+            "usuario.email",
+            "usuario.senha",
+            "usuario.perfil_id",
+            "usuario.status",
+            "usuario.data_criacao",
             "perfil_acesso.nome as perfil",
             "perfil_acesso.escopo",
             "perfil_acesso.status as perfil_status",
@@ -20,9 +26,25 @@ export const acessoModel = {
     buscarPorEmail(email: string) {
         return buscarComVinculos().where("usuario.email", email).first();
     },
-    async buscarDados(usuarioId: number) {
-        const colaborador = await db("colaborador").where({ usuario_id: usuarioId }).first();
-        const conveniado = await db("conveniado").where({ usuario_id: usuarioId }).first();
+    async buscarDados(usuarioId: number, escopo?: string) {
+        if (escopo === undefined) {
+            const perfil = await db("usuario")
+                .join("perfil_acesso", "perfil_acesso.id", "usuario.perfil_id")
+                .select("perfil_acesso.escopo")
+                .where("usuario.id", usuarioId)
+                .first();
+            escopo = perfil?.escopo;
+        }
+        const colaborador = escopo === "COLABORADOR"
+            ? await db("colaborador")
+                .select("id", "usuario_id", "matricula", "setor", "cargo", "telefone", "data_admissao", "status")
+                .where({ usuario_id: usuarioId }).first()
+            : null;
+        const conveniado = escopo === "CONVENIADO"
+            ? await db("conveniado")
+                .select("id", "usuario_id", "nome_fantasia", "razao_social", "categoria", "cnpj", "endereco", "status")
+                .where({ usuario_id: usuarioId }).first()
+            : null;
         return { colaborador: colaborador ?? null, conveniado: conveniado ?? null };
     },
 };

@@ -31,8 +31,11 @@ export const MENSAGEM_ID_INVALIDO = "ID inválido. Informe um número inteiro po
 
 // Mesma regra do validarId do utilitário de cadastros.
 export function validarId(id: unknown): number | null {
+  if (typeof id !== "number" && (typeof id !== "string" || !/^\d+$/.test(id.trim()))) {
+    return null;
+  }
   const numero = Number(id);
-  if (!Number.isInteger(numero) || numero <= 0) {
+  if (!Number.isSafeInteger(numero) || numero <= 0) {
     return null;
   }
   return numero;

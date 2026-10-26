@@ -126,6 +126,8 @@ export const recursosListagem = {
     periodo: "Data de solicitação da utilização (inclui todo o dia final).",
     filtros: {
       colaborador_id: inteiro("utilizacao.colaborador_id"),
+      beneficio_id: inteiro("oferta_comum.beneficio_id"),
+      beneficio_campanha_id: inteiro("oferta_campanha.beneficio_campanha_id"),
       beneficio_conveniado_id: inteiro("utilizacao.beneficio_conveniado_id"),
       beneficio_campanha_conveniado_id: inteiro("utilizacao.beneficio_campanha_conveniado_id"),
       status: enumeracao("utilizacao.status", ["PENDENTE", "APROVADA", "REPROVADA", "ESTORNADA"]),
