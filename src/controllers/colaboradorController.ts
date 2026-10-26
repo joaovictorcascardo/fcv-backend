@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { colaboradorModel } from "../models/colaboradorModel";
+import { validarId } from "../utils/validacoes";
 
 export const colaboradorController = {
   async listar(req: Request, res: Response) {
@@ -8,7 +9,12 @@ export const colaboradorController = {
   },
 
   async buscar(req: Request, res: Response) {
-    const item = await colaboradorModel.buscarPorId(Number(req.params.id));
+    const id = validarId(req.params.id);
+    if (!id) {
+      res.status(400).json({ erro: "ID inválido. Informe um número inteiro positivo" });
+      return;
+    }
+    const item = await colaboradorModel.buscarPorId(id);
     if (!item) {
       res.status(404).json({ erro: "Colaborador não encontrado" });
       return;
