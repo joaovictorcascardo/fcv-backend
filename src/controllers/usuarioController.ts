@@ -9,7 +9,7 @@ export const usuarioController = {
     res.json(lista);
   },
 
-    async buscar(req: Request, res: Response) {
+  async buscar(req: Request, res: Response) {
     const id = validarId(req.params.id);
     if (!id) {
       res.status(400).json({ erro: "ID inválido. Informe um número inteiro positivo" });
@@ -37,7 +37,7 @@ export const usuarioController = {
       res.status(valEmail.status).json({ erro: valEmail.erro });
       return;
     }
-    
+
     const valSenha = validarSenha(senha);
     if (valSenha.erro) {
       res.status(valSenha.status).json({ erro: valSenha.erro });
@@ -49,13 +49,13 @@ export const usuarioController = {
       res.status(400).json({ erro: "Informe um perfil_id válido (número inteiro positivo)" });
       return;
     }
-    
+
     const perfilExiste = await perfilAcessoModel.buscarPorId(idPerfil);
     if (!perfilExiste) {
       res.status(400).json({ erro: "Perfil de acesso informado não existe" });
       return;
     }
-    
+
     const valStatus = validarStatusUsuario(status);
     if (valStatus.erro) {
       res.status(valStatus.status).json({ erro: valStatus.erro });
@@ -67,14 +67,14 @@ export const usuarioController = {
       res.status(409).json({ erro: "Já existe um usuário com esse e-mail" });
       return;
     }
-  
+
     const id = await usuarioModel.criar({
       nome: valNome.valor,
       email: valEmail.valor,
       senha: valSenha.valor,
       perfil_id: idPerfil,
-    status: valStatus.valor ?? "ATIVO",
-  });
+      status: valStatus.valor ?? "ATIVO",
+    });
 
     const novo = await usuarioModel.buscarPorId(id);
     res.status(201).json(novo);
@@ -110,7 +110,7 @@ export const usuarioController = {
         res.status(valEmail.status).json({ erro: valEmail.erro });
         return;
       }
-    if (valEmail.valor !== usuarioAtual.email) {
+      if (valEmail.valor !== usuarioAtual.email) {
         const emailEmUso = await usuarioModel.buscarPorEmail(valEmail.valor!);
         if (emailEmUso) {
           res.status(409).json({ erro: "Já existe um usuário com esse e-mail" });
@@ -126,6 +126,21 @@ export const usuarioController = {
         return;
       }
       dadosAtualizar.senha = valSenha.valor;
+    }
+    if (req.body?.perfil_id !== undefined) {
+      const idPerfil = validarId(req.body.perfil_id);
+      if (!idPerfil) {
+        res.status(400).json({ erro: "Informe um perfil_id válido (número inteiro positivo)" });
+        return;
+      }
+
+      const perfilExiste = await perfilAcessoModel.buscarPorId(idPerfil);
+      if (!perfilExiste) {
+        res.status(400).json({ erro: "Perfil de acesso informado não existe" });
+        return;
+      }
+
+      dadosAtualizar.perfil_id = idPerfil;
     }
   },
 
