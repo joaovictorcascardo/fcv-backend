@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { usuarioModel } from "../models/usuarioModel";
 import { validarEmailUsuario, validarId, validarNomeUsuario, validarSenha } from "../utils/validacoes";
+import { perfilAcessoModel } from "../models/perfilAcessoModel";
 
 export const usuarioController = {
   async listar(req: Request, res: Response) {
@@ -40,6 +41,18 @@ export const usuarioController = {
     const valSenha = validarSenha(senha);
     if (valSenha.erro) {
       res.status(valSenha.status).json({ erro: valSenha.erro });
+      return;
+    }
+
+    const idPerfil = validarId(perfil_id);
+    if (!idPerfil) {
+      res.status(400).json({ erro: "Informe um perfil_id válido (número inteiro positivo)" });
+      return;
+    }
+    
+    const perfilExiste = await perfilAcessoModel.buscarPorId(idPerfil);
+    if (!perfilExiste) {
+      res.status(400).json({ erro: "Perfil de acesso informado não existe" });
       return;
     }
     
