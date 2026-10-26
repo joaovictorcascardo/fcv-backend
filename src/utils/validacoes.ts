@@ -2,6 +2,7 @@
 const ESCOPOS_VALIDOS = ["FCV", "COLABORADOR", "CONVENIADO"] as const;
 const STATUS_VALIDOS = ["ATIVO", "INATIVO"] as const;
 export const STATUS_USUARIO_VALIDOS = ["ATIVO", "INATIVO"] as const;
+export const STATUS_COLABORADOR_VALIDOS = ["ATIVO", "INATIVO", "AFASTADO"] as const;
 
 export function validarId(id: unknown): number | null {
   const numero = Number(id);
@@ -89,4 +90,16 @@ export function validarStatusUsuario(status: unknown) {
     return { erro: "Status inválido. Opções permitidas: ATIVO, INATIVO", status: 400 };
   }
   return { valor: status };
+}
+
+// Validações dos Colaboradores
+export function validarMatricula(matricula: unknown) {
+  if (!matricula || typeof matricula !== "string" || !matricula.trim()) {
+    return { erro: "Informe a matrícula do colaborador", status: 400 };
+  }
+  const limpo = matricula.trim();
+  if (limpo.length > 30) {
+    return { erro: "A matrícula não pode ter mais de 30 caracteres", status: 400 };
+  }
+  return { valor: limpo };
 }
