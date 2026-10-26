@@ -137,6 +137,12 @@ export const perfilAcessoController = {
       res.status(400).json({ erro: "ID inválido. Informe um número inteiro positivo" });
       return;
     }
+
+    const perfil = await perfilAcessoModel.buscarPorId(id);
+    if (!perfil) {
+      res.status(404).json({ erro: "Perfil de acesso não encontrado" });
+      return;
+    }
     
     await perfilAcessoModel.excluir(id);
     res.status(204).send();
