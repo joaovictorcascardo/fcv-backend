@@ -95,7 +95,6 @@ Resumo das rotas (todas começam com `/api/v1`):
 | `/auth/login` e `/auth/eu` | Qualquer pessoa / usuário logado | Login e dados de quem está logado |
 | `/auth/registrar` | Qualquer pessoa | Colaborador cria a própria conta (nasce inativa até a FCV liberar) |
 | `/auth/esqueci-senha` e `/auth/redefinir-senha` | Qualquer pessoa | Pede um código de 6 dígitos e troca a senha com ele |
-
 | `/perfis` | Ver: escopo FCV. Criar, alterar e excluir: só `FCV_ADMINISTRADOR` | Perfis de acesso |
 | `/usuarios` | Ver: escopo FCV. Criar, alterar e excluir: só `FCV_ADMINISTRADOR` | Contas de acesso (a senha é criptografada) |
 | `/colaboradores` | Escopo FCV | Dados de RH do colaborador |
@@ -120,10 +119,11 @@ Todos com a senha **`123456`**.
 | `admin@fcv.org.br` | FCV | Administrador: único que cria e altera usuários e perfis |
 | `operador@fcv.org.br` | FCV | Equipe operacional: vê usuários e perfis, mas não altera |
 | `carla@fcv.org.br`, `diego@fcv.org.br` | COLABORADOR | Usuários do aplicativo |
-| `elisa@fcv.org.br` | COLABORADOR | **Afastada**: o login é recusado | COLABORADOR | Usuários do aplicativo |
+| `elisa@fcv.org.br` | COLABORADOR | **Afastada**: o login é recusado |
 | `fabio@fcv.org.br` | COLABORADOR | **Inativo**: serve para testar o login recusado |
 | `farmacia@parceiro.com`, `academia@parceiro.com` | CONVENIADO | Estabelecimentos parceiros |
 | `otica@parceiro.com` | CONVENIADO | **Em análise**: o login é recusado |
+
 ---
 
 ## 4. Autenticação: como integrar o login
@@ -136,18 +136,13 @@ A API usa **JWT**. Funciona como a pulseira de um evento: você mostra o documen
 4. Em toda requisição seguinte, envia o token no cabeçalho `Authorization: Bearer <token>`.
 5. O token vale **8 horas**. Quando vencer, a API responde `401` e o front volta para o login.
 
-Para sair, basta o front apagar o token. Ao abrir o app ou o portal com um token já guardado, chame `GET /api/v1/auth/eu`: se vier `200`, o usuário continua logado; se 
-vier `401` ou `403`, mande para o login.
-**Acesso retirado vale na hora:** a cada requisição a API confere no banco se o usuário, o perfil e o vínculo (colaborador ou 
-conveniado) continuam ativos. Se a FCV inativar ou afastar alguém, o token dessa pessoa para de funcionar na próxima chamada 
-(`403`), sem esperar as 8 horas
+Para sair, basta o front apagar o token. Ao abrir o app ou o portal com um token já guardado, chame `GET /api/v1/auth/eu`: se vier `200`, o usuário continua logado; se vier `401` ou `403`, mande para o login.
+
+**Acesso retirado vale na hora:** a cada requisição a API confere no banco se o usuário, o perfil e o vínculo (colaborador ou conveniado) continuam ativos. Se a FCV inativar ou afastar alguém, o token dessa pessoa para de funcionar na próxima chamada (`403`), sem esperar as 8 horas.
 
 **Criar conta (colaborador):** a tela de cadastro envia nome, e-mail, senha, matrícula, setor, cargo e data de admissão para `POST /api/v1/auth/registrar`. A conta nasce `INATIVO`, então o login responde `403` até a FCV liberar pelo portal (`PUT /api/v1/usuarios/:id` com `"status": "ATIVO"`).
 
-**Esqueci minha senha:** `POST /api/v1/auth/esqueci-senha` com o `email` gera um código de 6 dígitos que vale 15 minutos. A 
-resposta é sempre a mesma e **não traz o código** (senão qualquer um trocaria a senha de outra pessoa). Ainda não há envio por 
-e-mail: no protótipo o código aparece **só no terminal da API**. A tela seguinte envia `email`, `codigo` e `nova_senha` para 
-`POST /api/v1/auth/redefinir-senha`. O código vale para 5 tentativas, e cada usuário pode pedir no máximo 3 códigos por hora.
+**Esqueci minha senha:** `POST /api/v1/auth/esqueci-senha` com o `email` gera um código de 6 dígitos que vale 15 minutos. A resposta é sempre a mesma e **não traz o código** (senão qualquer um trocaria a senha de outra pessoa). Ainda não há envio por e-mail: no protótipo o código aparece **só no terminal da API**. A tela seguinte envia `email`, `codigo` e `nova_senha` para `POST /api/v1/auth/redefinir-senha`. O código vale para 5 tentativas, e cada usuário pode pedir no máximo 3 códigos por hora.
 
 **Qual tela abrir depois do login**, pelo campo `usuario.escopo`:
 
@@ -211,8 +206,7 @@ Todo erro volta no mesmo formato:
 | --- | --- | --- |
 | `400` | Dados inválidos | Campo obrigatório vazio, JSON mal formatado |
 | `401` | Não está logado | Token ausente, inválido ou vencido |
-| `403` | Sem permissão | Colaborador acessando `/usuarios`, operador criando um usuário, conta inativa, afastada ou em análise 
-|
+| `403` | Sem permissão | Colaborador acessando `/usuarios`, operador criando um usuário, conta inativa, afastada ou em análise |
 | `404` | Não encontrado | Rota ou registro inexistente |
 | `409` | Conflito | E-mail já cadastrado, exclusão de registro ligado a outros |
 | `500` | Erro interno | O detalhe aparece no terminal da API |
