@@ -19,6 +19,18 @@ export const perfilAcessoModel = {
     return db(TABELA).where({ id }).first();
   },
 
+  buscarPorNome(nome: string) {
+    return db(TABELA).where({ nome }).first();
+  },
+
+  async contarUsuariosVinculados(perfilId: number): Promise<number> {
+    const resultado = await db("usuario")
+      .where({ perfil_id: perfilId })
+      .count<{ total: number }>("id as total")
+      .first();
+    return Number(resultado?.total ?? 0);
+  },
+
   async criar(dados: any) {
     const [id] = await db(TABELA).insert(prepararPermissoes(dados));
     return id;

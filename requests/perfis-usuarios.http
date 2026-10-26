@@ -13,28 +13,46 @@ Content-Type: application/json
 ###
 @token = {{login.response.body.$.token}}
 
-###
+# ========================================================
+# 1. PERFIS DE ACESSO (/perfis)
+# ========================================================
+
+### 1.1 Listar todos os perfis
 GET {{api}}/perfis
 Authorization: Bearer {{token}}
 
-###
+### 1.2 Buscar perfil por ID
 GET {{api}}/perfis/1
 Authorization: Bearer {{token}}
 
-###
+### 1.3 Buscar perfil com ID inválido (Retorna 400)
+GET {{api}}/perfis/abc
+Authorization: Bearer {{token}}
+
+### 1.4 Criar perfil com sucesso (Retorna 201)
 # @name novoPerfil
 POST {{api}}/perfis
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "nome": "FCV_ESTAGIARIO",
+  "nome": "FCV_ESTAGIARIO_TESTE",
   "escopo": "FCV",
-  "descricao": "Só consulta",
+  "descricao": "Acesso de consulta do estagiário",
   "permissoes": ["consultar"]
 }
 
-###
+### 1.5 Criar perfil com nome duplicado (Retorna 409)
+POST {{api}}/perfis
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "FCV_ESTAGIARIO_TESTE",
+  "escopo": "FCV"
+}
+
+### 1.6 Atualizar perfil (Retorna 200)
 PUT {{api}}/perfis/{{novoPerfil.response.body.$.id}}
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -43,19 +61,32 @@ Content-Type: application/json
   "status": "INATIVO"
 }
 
-###
+### 1.7 Tentativa de excluir perfil com usuários vinculados (Retorna 409)
+DELETE {{api}}/perfis/1
+Authorization: Bearer {{token}}
+
+### 1.8 Excluir perfil sem vínculos (Retorna 204)
 DELETE {{api}}/perfis/{{novoPerfil.response.body.$.id}}
 Authorization: Bearer {{token}}
 
-###
+
+# ========================================================
+# 2. USUÁRIOS (/usuarios)
+# ========================================================
+
+### 2.1 Listar usuários
 GET {{api}}/usuarios
 Authorization: Bearer {{token}}
 
-###
+### 2.2 Buscar usuário por ID
 GET {{api}}/usuarios/1
 Authorization: Bearer {{token}}
 
-###
+### 2.3 Buscar usuário com ID inexistente (Retorna 404)
+GET {{api}}/usuarios/99999
+Authorization: Bearer {{token}}
+
+### 2.4 Criar novo usuário (Retorna 201)
 # @name novoUsuario
 POST {{api}}/usuarios
 Authorization: Bearer {{token}}
@@ -63,20 +94,55 @@ Content-Type: application/json
 
 {
   "nome": "Gustavo Teste",
-  "email": "gustavo@fcv.org.br",
-  "senha": "123456",
+  "email": "gustavo.teste@fcv.org.br",
+  "senha": "senhaSegura123",
   "perfil_id": 3
 }
 
-###
+### 2.5 Criar usuário com e-mail duplicado (Retorna 409)
+POST {{api}}/usuarios
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "Outro Gustavo",
+  "email": "gustavo.teste@fcv.org.br",
+  "senha": "outraSenha123",
+  "perfil_id": 3
+}
+
+### 2.6 Criar usuário com perfil inexistente (Retorna 400)
+POST {{api}}/usuarios
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nome": "Teste Perfil Inexistente",
+  "email": "inexistente@fcv.org.br",
+  "senha": "senhaSegura123",
+  "perfil_id": 9999
+}
+
+### 2.7 Atualizar usuário com sucesso (Retorna 200)
 PUT {{api}}/usuarios/{{novoUsuario.response.body.$.id}}
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "nome": "Gustavo Silva"
+  "nome": "Gustavo Silva Atualizado"
 }
 
-###
+### 2.8 Atualizar usuário com payload vazio (Retorna 400)
+PUT {{api}}/usuarios/{{novoUsuario.response.body.$.id}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{}
+
+### 2.9 Tentativa de excluir usuário com colaborador ou conveniado vinculado (Retorna 409)
+DELETE {{api}}/usuarios/1
+Authorization: Bearer {{token}}
+
+### 2.10 Excluir usuário sem vínculos (Retorna 204)
 DELETE {{api}}/usuarios/{{novoUsuario.response.body.$.id}}
 Authorization: Bearer {{token}}

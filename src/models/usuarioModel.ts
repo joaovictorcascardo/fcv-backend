@@ -14,6 +14,27 @@ export const usuarioModel = {
     return db(TABELA).select(COLUNAS).where({ id }).first();
   },
 
+  buscarPorEmail(email: string) {
+    return db(TABELA).select(COLUNAS).where({ email }).first();
+  },
+
+  async contarVinculos(usuarioId: number): Promise<{ colaboradores: number; conveniados: number }> {
+    const colab = await db("colaborador")
+      .where({ usuario_id: usuarioId })
+      .count<{ total: number }>("id as total")
+      .first();
+
+    const conv = await db("conveniado")
+      .where({ usuario_id: usuarioId })
+      .count<{ total: number }>("id as total")
+      .first();
+
+    return {
+      colaboradores: Number(colab?.total ?? 0),
+      conveniados: Number(conv?.total ?? 0),
+    };
+  },
+
   async criar(dados: any) {
     if (dados.senha) {
       dados.senha = await bcrypt.hash(String(dados.senha), 10);
