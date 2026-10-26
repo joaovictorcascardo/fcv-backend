@@ -69,9 +69,26 @@ Content-Type: application/json
 }
 
 ###
+# Cancela sem apagar: APROVADA vira ESTORNADA (o registro continua no histórico)
 DELETE {{api}}/utilizacoes/{{novaUtilizacao.response.body.$.id}}
 Authorization: Bearer {{token}}
 
 ###
+# 409: a mesma utilização já está encerrada
+DELETE {{api}}/utilizacoes/{{novaUtilizacao.response.body.$.id}}
+Authorization: Bearer {{token}}
+
+###
+# Cancela sem apagar: PENDENTE vira REPROVADA
 DELETE {{api}}/utilizacoes/{{utilizacaoCampanha.response.body.$.id}}
+Authorization: Bearer {{token}}
+
+###
+# Continua aparecendo, com status REPROVADA e observação "Cancelada pela FCV"
+GET {{api}}/utilizacoes/{{utilizacaoCampanha.response.body.$.id}}
+Authorization: Bearer {{token}}
+
+###
+# 404: utilização inexistente
+DELETE {{api}}/utilizacoes/999999
 Authorization: Bearer {{token}}

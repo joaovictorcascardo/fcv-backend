@@ -81,3 +81,13 @@ Authorization: Bearer {{token}}
 ###
 DELETE {{api}}/beneficios/{{novoBeneficio.response.body.$.id}}
 Authorization: Bearer {{token}}
+
+###
+# 409: a oferta 1 tem utilizações registradas (inative com PUT status INATIVO)
+DELETE {{api}}/ofertas/1
+Authorization: Bearer {{token}}
+
+###
+# 409: o benefício 1 tem utilizações pela oferta 1
+DELETE {{api}}/beneficios/1
+Authorization: Bearer {{token}}

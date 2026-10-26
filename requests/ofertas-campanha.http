@@ -44,3 +44,8 @@ Content-Type: application/json
 ###
 DELETE {{api}}/ofertas-campanha/{{novaOfertaItem.response.body.$.id}}
 Authorization: Bearer {{token}}
+
+###
+# 409: a oferta de campanha 1 tem utilizações registradas
+DELETE {{api}}/ofertas-campanha/1
+Authorization: Bearer {{token}}
