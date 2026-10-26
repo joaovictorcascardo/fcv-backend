@@ -4,16 +4,7 @@ import bcrypt from "bcryptjs";
 import jwt, { SignOptions } from "jsonwebtoken";
 import db from "../database/db";
 import { acessoModel, motivoBloqueio } from "../models/acessoModel";
-const MAXIMO_TENTATIVAS = 5;
-const MAXIMO_CODIGOS_POR_HORA = 3;
-async function podeGerarCodigo(usuarioId: number) {
-  const recentes = await db("redefinicao_senha")
-    .where({ usuario_id: usuarioId })
-    .where("data_criacao", ">", db.raw("DATE_SUB(NOW(), INTERVAL 1 HOUR)"))
-    .count({ total: "*" })
-    .first();
-  return Number(recentes?.total) < MAXIMO_CODIGOS_POR_HORA;
-}
+import { redefinicaoSenhaModel } from "../models/redefinicaoSenhaModel";
 export const authController = {
   async login(req: Request, res: Response) {
     const { email, senha } = req.body ?? {};
@@ -42,7 +33,7 @@ export const authController = {
       },
     );
     delete usuario.senha;
-    const dados = await acessoModel.buscarDados(usuario.id);
+    const dados = await acessoModel.buscarDados(usuario.id, usuario.escopo);
     res.json({ token, usuario: { ...usuario, ...dados } });
   },
   async eu(req: Request, res: Response) {
@@ -52,7 +43,7 @@ export const authController = {
       return;
     }
     delete usuario.senha;
-    const dados = await acessoModel.buscarDados(usuario.id);
+    const dados = await acessoModel.buscarDados(usuario.id, usuario.escopo);
     res.json({ ...usuario, ...dados });
   },
   async esqueciSenha(req: Request, res: Response) {
@@ -62,17 +53,10 @@ export const authController = {
       return;
     }
     const usuario = await db("usuario").where({ email }).first();
-    if (usuario && (await podeGerarCodigo(usuario.id))) {
+    if (usuario) {
       const codigo = String(crypto.randomInt(100000, 1000000));
-      await db("redefinicao_senha")
-        .where({ usuario_id: usuario.id, usado: false })
-        .update({ usado: true });
-      await db("redefinicao_senha").insert({
-        usuario_id: usuario.id,
-        codigo: await bcrypt.hash(codigo, 10),
-        expira_em: db.raw("DATE_ADD(NOW(), INTERVAL 15 MINUTE)"),
-      });
-      if (process.env.NODE_ENV !== "production") {
+      const gerado = await redefinicaoSenhaModel.gerarCodigo(usuario.id, await bcrypt.hash(codigo, 10));
+      if (gerado && process.env.NODE_ENV !== "production") {
         console.log(`Código de redefinição para ${email}: ${codigo}`);
       }
     }
@@ -86,33 +70,11 @@ export const authController = {
       res.status(400).json({ erro: "Informe e-mail, código e nova senha" });
       return;
     }
-    const pedido = await db("redefinicao_senha")
-      .join("usuario", "usuario.id", "redefinicao_senha.usuario_id")
-      .select("redefinicao_senha.*")
-      .where("usuario.email", email)
-      .where("redefinicao_senha.usado", false)
-      .where("redefinicao_senha.expira_em", ">", db.fn.now())
-      .where("redefinicao_senha.tentativas", "<", MAXIMO_TENTATIVAS)
-      .orderBy("redefinicao_senha.id", "desc")
-      .first();
-    const tentativaContada =
-      pedido &&
-      (await db("redefinicao_senha")
-        .where({ id: pedido.id })
-        .where("tentativas", "<", MAXIMO_TENTATIVAS)
-        .increment("tentativas", 1));
-    const codigoConfere =
-      tentativaContada && (await bcrypt.compare(String(codigo), pedido.codigo));
-    if (!codigoConfere) {
+    const alterada = await redefinicaoSenhaModel.redefinir(email, String(codigo), String(nova_senha));
+    if (!alterada) {
       res.status(400).json({ erro: "Código inválido ou expirado" });
       return;
     }
-    await db("usuario")
-      .where({ id: pedido.usuario_id })
-      .update({ senha: await bcrypt.hash(String(nova_senha), 10) });
-    await db("redefinicao_senha")
-      .where({ usuario_id: pedido.usuario_id })
-      .update({ usado: true });
     res.json({ mensagem: "Senha alterada" });
   },
   async registrar(req: Request, res: Response) {
