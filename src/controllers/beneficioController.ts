@@ -1,6 +1,7 @@
 
 import { Request, Response } from "express";
-import { beneficioModel } from "../models/beneficioModel";
+import { beneficioModel, validarRegrasBeneficio } from "../models/beneficioModel";
+export { RegraBeneficioErro, validarRegrasBeneficio } from "../models/beneficioModel";
 
 export const beneficioController = {
   async listar(req: Request, res: Response) {
@@ -42,4 +43,6 @@ export const beneficioController = {
     }
     res.status(204).send();
   },
+
+  validarRegrasBeneficio,
 };
