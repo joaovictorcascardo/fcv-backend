@@ -89,6 +89,18 @@ export const utilizacaoController = {
     const dados = await obterDadosDaCriacao(req, res);
     if (!dados) return;
 
+    const beneficioComum = dados?.beneficio_conveniado_id != null;
+    
+    const beneficioCampanha = dados?.beneficio_campanha_conveniado_id != null;
+    if (beneficioComum === beneficioCampanha) {
+      res.status(400).json({ erro: "Informe exatamente uma origem de benefício" });
+      return;
+    }
+
+    if (dados?.valor_aplicado == null || dados?.valor_aplicado === "") {
+      dados.valor_aplicado = (await utilizacaoModel.buscarValorPadrao(dados)) ?? 0;
+    }
+
     const valorAplicado = dados?.valor_aplicado;
     if (
       valorAplicado == null ||
@@ -96,13 +108,6 @@ export const utilizacaoController = {
       !Number.isFinite(Number(valorAplicado))
     ) {
       res.status(400).json({ erro: "Valor aplicado inválido" });
-      return;
-    }
-
-    const beneficioComum = dados?.beneficio_conveniado_id != null;
-    const beneficioCampanha = dados?.beneficio_campanha_conveniado_id != null;
-    if (beneficioComum === beneficioCampanha) {
-      res.status(400).json({ erro: "Informe exatamente uma origem de benefício" });
       return;
     }
 

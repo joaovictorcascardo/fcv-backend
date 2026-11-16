@@ -32,6 +32,7 @@ export const utilizacaoModel = {
       .join("usuario", "usuario.id", "colaborador.usuario_id")
       .select(
         "utilizacao.id",
+        "utilizacao.token_qrcode",
         "utilizacao.status",
         "utilizacao.valor_aplicado",
         "utilizacao.canal_validacao",
@@ -74,6 +75,29 @@ export const utilizacaoModel = {
 
   buscarPorId(id: number) {
     return db(TABELA).where({ id }).first();
+  },
+
+  async buscarValorPadrao(dados: {
+    beneficio_conveniado_id?: number;
+    beneficio_campanha_conveniado_id?: number;
+  }): Promise<number | null> {
+    if (dados.beneficio_conveniado_id) {
+      const item = await db("beneficio_conveniado as bc")
+        .join("beneficio as b", "b.id", "bc.beneficio_id")
+        .where("bc.id", Number(dados.beneficio_conveniado_id))
+        .select("b.valor")
+        .first();
+      return item ? Number(item.valor) : null;
+    }
+    if (dados.beneficio_campanha_conveniado_id) {
+      const item = await db("beneficio_campanha_conveniado as bcc")
+        .join("beneficio_campanha as bc", "bc.id", "bcc.beneficio_campanha_id")
+        .where("bcc.id", Number(dados.beneficio_campanha_conveniado_id))
+        .select("bc.valor")
+        .first();
+      return item ? Number(item.valor) : null;
+    }
+    return null;
   },
 
   async criar(dados: any) {
