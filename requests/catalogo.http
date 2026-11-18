@@ -1,0 +1,50 @@
+@api = http://localhost:3333/api/v1
+
+###
+# @name loginColaborador
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+    "email": "carla@fcv.org.br",
+    "senha": "123456"
+}
+
+###
+@token = {{loginColaborador.response.body.$.token}}
+
+###
+GET {{api}}/catalogo/resumo
+Authorization: Bearer {{token}}
+
+###
+GET {{api}}/catalogo/beneficios
+Authorization: Bearer {{token}}
+
+###
+GET {{api}}/catalogo/beneficios?busca=medicamento
+Authorization: Bearer {{token}}
+
+###
+GET {{api}}/catalogo/beneficios?categoria_id=3
+Authorization: Bearer {{token}}
+
+###
+GET {{api}}/catalogo/beneficios/1
+Authorization: Bearer {{token}}
+
+###
+GET {{api}}/catalogo/locais
+Authorization: Bearer {{token}}
+
+###
+GET {{api}}/catalogo/locais?busca=vida&categoria_id=1
+Authorization: Bearer {{token}}
+
+###
+GET {{api}}/catalogo/locais/2
+Authorization: Bearer {{token}}
+
+### 404: local em análise não aparece no app
+GET {{api}}/catalogo/locais/3
+Authorization: Bearer {{token}}

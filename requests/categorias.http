@@ -1,0 +1,85 @@
+@api = http://localhost:3333/api/v1
+
+###
+# @name loginAdmin
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+    "email": "admin@fcv.org.br",
+    "senha": "123456"
+}
+
+###
+@token = {{loginAdmin.response.body.$.token}}
+
+###
+GET {{api}}/categorias
+Authorization: Bearer {{token}}
+
+###
+GET {{api}}/categorias?status=ATIVO
+Authorization: Bearer {{token}}
+
+###
+# @name novaCategoria
+POST {{api}}/categorias
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "nome": "Pet shop"
+}
+
+###
+GET {{api}}/categorias/{{novaCategoria.response.body.$.id}}
+Authorization: Bearer {{token}}
+
+###
+PUT {{api}}/categorias/{{novaCategoria.response.body.$.id}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "nome": "Pet"
+}
+
+### 409: nome repetido
+POST {{api}}/categorias
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "nome": "Farmácia"
+}
+
+### 409: categoria com conveniado vinculado não é excluída
+DELETE {{api}}/categorias/1
+Authorization: Bearer {{token}}
+
+###
+DELETE {{api}}/categorias/{{novaCategoria.response.body.$.id}}
+Authorization: Bearer {{token}}
+
+### 400: conveniado sem categoria
+POST {{api}}/conveniados
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "usuario_id": 3,
+    "nome_fantasia": "Sem categoria",
+    "razao_social": "Sem categoria Ltda",
+    "cnpj": "45723174000110",
+    "endereco": "Rua A, 1",
+    "categorias": []
+}
+
+###
+PUT {{api}}/conveniados/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "categorias": [1, 2]
+}
