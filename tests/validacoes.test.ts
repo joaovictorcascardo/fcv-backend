@@ -3,6 +3,8 @@ import test from "node:test";
 import {
   validarCargo,
   validarCategoria,
+  validarNomeCategoria,
+  validarStatusCategoria,
   validarCNPJConveniado,
   validarDataAdmissao,
   validarEmailUsuario,
@@ -99,6 +101,38 @@ test("validacoes de colaborador", () => {
   assert.deepEqual(validarTelefone(undefined), { valor: null });
   assert.deepEqual(validarTelefone(""), { valor: null });
   assert.equal(validarTelefone("1".repeat(21))?.status, 400);
+});
+
+test("validacoes de categoria", () => {
+  assert.deepEqual(
+    validarNomeCategoria(" Fitness "),
+    { valor: "Fitness" }
+  );
+
+  assert.equal(
+    validarNomeCategoria("")?.status,
+    400
+  );
+
+  assert.equal(
+    validarNomeCategoria("C".repeat(61))?.status,
+    400
+  );
+
+  assert.deepEqual(
+    validarStatusCategoria(undefined),
+    { valor: undefined }
+  );
+
+  assert.deepEqual(
+    validarStatusCategoria("INATIVO"),
+    { valor: "INATIVO" }
+  );
+
+  assert.equal(
+    validarStatusCategoria("EXCLUIDO")?.status,
+    400
+  );
 });
 
 test("validacoes de conveniado", () => {

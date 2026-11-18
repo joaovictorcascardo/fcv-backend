@@ -1,6 +1,7 @@
 import { Router } from "express";
 import authRoutes from "./authRoutes";
 import beneficioRoutes from "./beneficioRoutes";
+import categoriaRoutes from "./categoriaRoutes";
 import beneficioConveniadoRoutes from "./beneficioConveniadoRoutes";
 import beneficioCampanhaConveniadoRoutes from "./beneficioCampanhaConveniadoRoutes";
 import { autenticar } from "../middlewares/autenticar";
@@ -17,6 +18,7 @@ import euRoutes from "./euRoutes";
 const rotas = Router();
 rotas.use("/auth", authRoutes);
 rotas.use("/beneficios", autenticar, beneficioRoutes);
+rotas.use("/categorias", autenticar, categoriaRoutes);
 rotas.use("/ofertas", autenticar, beneficioConveniadoRoutes);
 rotas.use("/ofertas-campanha", autenticar, beneficioCampanhaConveniadoRoutes);
 rotas.use("/perfis", autenticar, permitir("FCV"), perfilAcessoRoutes);

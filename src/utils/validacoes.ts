@@ -220,6 +220,52 @@ export function validarCategoria(categoria: unknown) {
   }
   return { valor: limpo };
 }
+export const STATUS_CATEGORIA_VALIDOS = [
+  "ATIVO",
+  "INATIVO",
+] as const;
+
+export function validarNomeCategoria(nome: unknown) {
+  if (
+    !nome ||
+    typeof nome !== "string" ||
+    !nome.trim()
+  ) {
+    return {
+      erro: "Informe o nome da categoria",
+      status: 400,
+    };
+  }
+
+  const limpo = nome.trim();
+
+  if (limpo.length > 60) {
+    return {
+      erro: "O nome da categoria não pode ter mais de 60 caracteres",
+      status: 400,
+    };
+  }
+
+  return { valor: limpo };
+}
+
+export function validarStatusCategoria(status: unknown) {
+  if (status === undefined) {
+    return { valor: undefined };
+  }
+
+  if (
+    typeof status !== "string" ||
+    !STATUS_CATEGORIA_VALIDOS.includes(status as never)
+  ) {
+    return {
+      erro: "Status inválido. Use ATIVO ou INATIVO",
+      status: 400,
+    };
+  }
+
+  return { valor: status };
+}
 
 export function validarCNPJConveniado(cnpj: unknown) {
   if (!cnpj || typeof cnpj !== "string" || !cnpj.trim()) {
