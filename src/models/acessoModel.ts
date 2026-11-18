@@ -42,7 +42,7 @@ export const acessoModel = {
             : null;
         const conveniado = escopo === "CONVENIADO"
             ? await db("conveniado")
-                .select("id", "usuario_id", "nome_fantasia", "razao_social", "categoria", "cnpj", "endereco", "status")
+                .select("id", "usuario_id", "nome_fantasia", "razao_social", "cnpj", "endereco", "status")
                 .where({ usuario_id: usuarioId }).first()
             : null;
         return { colaborador: colaborador ?? null, conveniado: conveniado ?? null };

@@ -40,7 +40,7 @@ export function criarBaseHistorico(conexao: Knex, dono: DonoHistorico) {
       conexao.raw("COALESCE(beneficio.nome, item.nome) as beneficio_nome"),
       conexao.raw("IF(beneficio.id IS NULL, 'CAMPANHA', 'BENEFICIO') as origem"),
       "conveniado.id as conveniado_id", "conveniado.nome_fantasia as conveniado_nome_fantasia",
-      "conveniado.categoria as conveniado_categoria", "conveniado.endereco as conveniado_endereco",
+      "conveniado.endereco as conveniado_endereco",
       "usuario.nome as colaborador_nome",
     );
 

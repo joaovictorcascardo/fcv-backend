@@ -59,11 +59,33 @@ export const recursosListagem = {
   },
   conveniados: {
     tabela: "conveniado",
-    busca: ["conveniado.nome_fantasia", "conveniado.razao_social", "conveniado.cnpj", "conveniado.categoria"],
-    ordenarPor: ordenar("conveniado", ["id", "nome_fantasia", "razao_social", "categoria", "status"]),
+    busca: ["conveniado.nome_fantasia", "conveniado.razao_social", "conveniado.cnpj"],
+    ordenarPor: ordenar("conveniado", ["id", "nome_fantasia", "razao_social", "status"]),
     filtros: {
-      usuario_id: inteiro("conveniado.usuario_id"), categoria: texto("conveniado.categoria"), cnpj: texto("conveniado.cnpj"),
-      status: enumeracao("conveniado.status", ["ATIVO", "INATIVO", "EM_ANALISE"]),
+  usuario_id: inteiro("conveniado.usuario_id"),
+  cnpj: texto("conveniado.cnpj"),
+
+  categoria_id: {
+    tipo: "inteiro",
+    aplicar(query, valor) {
+      query.whereExists(function () {
+        this.select(1)
+          .from("conveniado_categoria")
+          .whereRaw(
+            "conveniado_categoria.conveniado_id = conveniado.id"
+          )
+          .where(
+            "conveniado_categoria.categoria_id",
+            valor
+          );
+      });
+    },
+  },
+
+  status: enumeracao(
+    "conveniado.status",
+    ["ATIVO", "INATIVO", "EM_ANALISE"]
+  ),
     },
   },
   beneficios: {

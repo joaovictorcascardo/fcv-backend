@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   validarCargo,
-  validarCategoria,
   validarCategorias,
   validarNomeCategoria,
   validarStatusCategoria,
@@ -169,10 +168,6 @@ test("validacoes de conveniado", () => {
   assert.deepEqual(validarRazaoSocial(" Pao Bom Ltda "), { valor: "Pao Bom Ltda" });
   assert.equal(validarRazaoSocial("")?.status, 400);
   assert.equal(validarRazaoSocial("R".repeat(151))?.status, 400);
-
-  assert.deepEqual(validarCategoria(" Alimentacao "), { valor: "Alimentacao" });
-  assert.equal(validarCategoria("")?.status, 400);
-  assert.equal(validarCategoria("C".repeat(61))?.status, 400);
 
   assert.deepEqual(validarCNPJConveniado("44.555.666/0001-54"), { valor: "44555666000154" });
   assert.deepEqual(validarCNPJConveniado("44555666000154"), { valor: "44555666000154" });

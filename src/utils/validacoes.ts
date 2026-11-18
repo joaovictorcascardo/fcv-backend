@@ -210,16 +210,7 @@ export function validarRazaoSocial(razao: unknown) {
   return { valor: limpo };
 }
 
-export function validarCategoria(categoria: unknown) {
-  if (!categoria || typeof categoria !== "string" || !categoria.trim()) {
-    return { erro: "Informe a categoria do conveniado", status: 400 };
-  }
-  const limpo = categoria.trim();
-  if (limpo.length > 60) {
-    return { erro: "A categoria não pode ter mais de 60 caracteres", status: 400 };
-  }
-  return { valor: limpo };
-}
+
 export const STATUS_CATEGORIA_VALIDOS = [
   "ATIVO",
   "INATIVO",
