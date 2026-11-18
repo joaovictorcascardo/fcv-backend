@@ -267,6 +267,31 @@ export function validarStatusCategoria(status: unknown) {
   return { valor: status };
 }
 
+export function validarCategorias(categorias: unknown) {
+  if (
+    !Array.isArray(categorias) ||
+    categorias.length === 0
+  ) {
+    return {
+      erro: "Informe ao menos uma categoria em categorias (lista de ids)",
+      status: 400,
+    };
+  }
+
+  const ids = categorias.map((id) => validarId(id));
+
+  if (ids.some((id) => id === null)) {
+    return {
+      erro: "Cada categoria deve ser um id inteiro positivo",
+      status: 400,
+    };
+  }
+
+  return {
+    valor: [...new Set(ids as number[])],
+  };
+}
+
 export function validarCNPJConveniado(cnpj: unknown) {
   if (!cnpj || typeof cnpj !== "string" || !cnpj.trim()) {
     return { erro: "Informe o CNPJ do conveniado", status: 400 };

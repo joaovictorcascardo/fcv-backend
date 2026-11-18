@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   validarCargo,
   validarCategoria,
+  validarCategorias,
   validarNomeCategoria,
   validarStatusCategoria,
   validarCNPJConveniado,
@@ -129,8 +130,33 @@ test("validacoes de categoria", () => {
     { valor: "INATIVO" }
   );
 
-  assert.equal(
+    assert.equal(
     validarStatusCategoria("EXCLUIDO")?.status,
+    400
+  );
+
+  assert.deepEqual(
+    validarCategorias([1, "2", 2]),
+    { valor: [1, 2] }
+  );
+
+  assert.equal(
+    validarCategorias([])?.status,
+    400
+  );
+
+  assert.equal(
+    validarCategorias(undefined)?.status,
+    400
+  );
+
+  assert.equal(
+    validarCategorias("Farmácia")?.status,
+    400
+  );
+
+  assert.equal(
+    validarCategorias([1, "x"])?.status,
     400
   );
 });
