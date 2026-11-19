@@ -17,6 +17,8 @@ export function formatarDataHora(texto: string) {
   return `${dia}/${mes}/${ano} às ${hora}`;
 }
 
+const NAO_ENCONTRADO = "Resgate não encontrado neste estabelecimento. Confira o código e se o benefício é aceito aqui";
+
 const MENSAGEM_ENCERRADO: Record<string, string> = {
   APROVADA: "Este resgate já foi aprovado",
   REPROVADA: "Este resgate já foi reprovado",
@@ -160,37 +162,33 @@ export const resgateModel = {
     return this.buscarDoColaborador(usuarioId, id);
   },
 
-  async localizar(codigo: string) {
-    const momento = agora();
+  async conferirParaValidar(usuarioConveniadoId: number, codigo: string) {
+    const conveniado = await db("conveniado").where({ usuario_id: usuarioConveniadoId }).first();
+    if (!conveniado) throw new ErroResgate(404, "Cadastro de conveniado não encontrado");
+
     const resgate = await detalhar(db)
-      .where("utilizacao.token_qrcode", codigo)
-      .orWhere("utilizacao.codigo_validacao", codigo)
+      .where(function () {
+        this.where("utilizacao.token_qrcode", codigo).orWhere("utilizacao.codigo_validacao", codigo);
+      })
       .first();
-    if (!resgate) throw new ErroResgate(404, "Resgate não encontrado. Confira o código");
+    const oferta = resgate?.beneficio_id
+      ? await db("beneficio_conveniado")
+          .where({ beneficio_id: resgate.beneficio_id, conveniado_id: conveniado.id, status: "ATIVO" })
+          .first()
+      : null;
+    if (!resgate || !oferta) throw new ErroResgate(404, NAO_ENCONTRADO);
+
+    const momento = agora();
     if (resgate.status === "PENDENTE" && resgate.data_expiracao <= momento) {
       await db("utilizacao").where({ id: resgate.id, status: "PENDENTE" }).update({ status: "EXPIRADA" });
       throw new ErroResgate(409, `Este resgate expirou em ${formatarDataHora(resgate.data_expiracao)}. Peça para o colaborador solicitar de novo`, {
         status: "EXPIRADA",
       });
     }
-    return comTempo(resgate, momento);
-  },
-
-  async conferirParaValidar(usuarioConveniadoId: number, codigo: string) {
-    const conveniado = await db("conveniado").where({ usuario_id: usuarioConveniadoId }).first();
-    if (!conveniado) throw new ErroResgate(404, "Cadastro de conveniado não encontrado");
-
-    const resgate = await this.localizar(codigo);
     if (resgate.status !== "PENDENTE") {
       throw new ErroResgate(409, MENSAGEM_ENCERRADO[resgate.status] ?? "Este resgate já foi encerrado", { status: resgate.status });
     }
-    if (!resgate.beneficio_id) throw new ErroResgate(409, "Este resgate não pode ser validado por aqui");
-
-    const oferta = await db("beneficio_conveniado")
-      .where({ beneficio_id: resgate.beneficio_id, conveniado_id: conveniado.id, status: "ATIVO" })
-      .first();
-    if (!oferta) throw new ErroResgate(403, "Este benefício não é aceito neste estabelecimento");
-    return { resgate, oferta, conveniado };
+    return { resgate: comTempo(resgate, momento), oferta, conveniado };
   },
 
   async decidir(usuarioConveniadoId: number, codigo: string, aprovar: boolean, canal: string, motivo?: string) {
@@ -216,10 +214,9 @@ export const resgateModel = {
       });
 
     if (!alterados) {
-      const atual = await this.localizar(codigo);
-      throw new ErroResgate(409, MENSAGEM_ENCERRADO[atual.status] ?? "Este resgate acabou de ser validado em outra leitura", {
-        status: atual.status,
-      });
+      const atual = await db("utilizacao").where({ id: resgate.id }).first("status", "data_expiracao");
+      const status = comTempo(atual, agora()).status;
+      throw new ErroResgate(409, MENSAGEM_ENCERRADO[status] ?? "Este resgate acabou de ser validado em outra leitura", { status });
     }
     const final = await detalhar(db).where("utilizacao.id", resgate.id).first();
     return comTempo(final, momento);
