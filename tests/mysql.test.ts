@@ -481,5 +481,12 @@ async function inserirFixtures(banco: Knex) {
     { id: 3, colaborador_id: 2, beneficio_conveniado_id: 2, beneficio_campanha_conveniado_id: null, data_solicitacao: "2026-10-25 00:00:00", status: "APROVADA" },
     { id: 4, colaborador_id: 2, beneficio_conveniado_id: null, beneficio_campanha_conveniado_id: 2, data_solicitacao: "2026-10-23 10:00:00", status: "PENDENTE" },
     { id: 5, colaborador_id: 3, beneficio_conveniado_id: 3, beneficio_campanha_conveniado_id: null, data_solicitacao: "2026-10-24 12:30:00", status: "ESTORNADA" },
-  ].map(r => ({ ...r, token_qrcode: randomUUID(), valor_aplicado: 5 })));
+  ].map(r => ({
+    ...r,
+    beneficio_id: r.beneficio_conveniado_id,
+    token_qrcode: randomUUID(),
+    codigo_validacao: `FIX00${r.id}`,
+    data_expiracao: "2030-01-01 00:00:00",
+    valor_aplicado: 5,
+  })));
 }
