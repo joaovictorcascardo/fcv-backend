@@ -122,7 +122,7 @@ export const recursosListagem = {
       { tabela: "beneficio_conveniado as oferta_comum", origem: "utilizacao.beneficio_conveniado_id", destino: "oferta_comum.id" },
       { tabela: "beneficio_campanha_conveniado as oferta_campanha", origem: "utilizacao.beneficio_campanha_conveniado_id", destino: "oferta_campanha.id" },
     ],
-    ordenarPor: ordenar("utilizacao", ["id", "data_solicitacao", "data_confirmacao", "valor_aplicado", "status"]),
+    ordenarPor: ordenar("utilizacao", ["id", "data_solicitacao", "data_validacao", "valor_aplicado", "status"]),
     periodo: "Data de solicitação da utilização (inclui todo o dia final).",
     filtros: {
       colaborador_id: inteiro("utilizacao.colaborador_id"),
@@ -130,7 +130,7 @@ export const recursosListagem = {
       beneficio_campanha_id: inteiro("oferta_campanha.beneficio_campanha_id"),
       beneficio_conveniado_id: inteiro("utilizacao.beneficio_conveniado_id"),
       beneficio_campanha_conveniado_id: inteiro("utilizacao.beneficio_campanha_conveniado_id"),
-      status: enumeracao("utilizacao.status", ["PENDENTE", "APROVADA", "REPROVADA", "ESTORNADA"]),
+      status: enumeracao("utilizacao.status", ["PENDENTE", "APROVADA", "REPROVADA", "ESTORNADA", "EXPIRADA", "CANCELADA"]),
       canal_validacao: enumeracao("utilizacao.canal_validacao", ["APP_CONVENIADO", "TERMINAL_IOT"]),
       origem: {
         tipo: "enum", valores: ["COMUM", "CAMPANHA"],

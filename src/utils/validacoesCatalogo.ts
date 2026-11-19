@@ -13,7 +13,7 @@ export type ResultadoCadastro =
 export const STATUS_BENEFICIO_VALIDOS = ["ATIVO", "INATIVO", "DESCONTINUADO"] as const;
 export const STATUS_OFERTA_VALIDOS = ["ATIVO", "INATIVO"] as const;
 export const STATUS_CAMPANHA_VALIDOS = ["PLANEJADA", "ATIVA", "ENCERRADA", "CANCELADA"] as const;
-export const STATUS_UTILIZACAO_VALIDOS = ["PENDENTE", "APROVADA", "REPROVADA", "ESTORNADA"] as const;
+export const STATUS_UTILIZACAO_VALIDOS = ["PENDENTE", "APROVADA", "REPROVADA", "ESTORNADA", "EXPIRADA", "CANCELADA"] as const;
 export const TIPOS_BENEFICIO_VALIDOS = ["PERCENTUAL", "VALOR_FIXO"] as const;
 export const TIPOS_JANELA_VALIDOS = ["CALENDARIO_FIXO", "JANELA_MOVEL"] as const;
 export const UNIDADES_CICLO_VALIDAS = ["ANO", "MES", "SEMANA"] as const;
@@ -314,7 +314,7 @@ export function validarUtilizacao(corpo: unknown, criando: boolean): ResultadoCa
     } : {}),
     token_qrcode: (v) => v === undefined ? {} : textoObrigatorio(v, "O token_qrcode não pode ser vazio", "O token_qrcode", 64),
     data_solicitacao: (v) => dataHoraOpcional(v, "data_solicitacao", false),
-    data_confirmacao: (v) => dataHoraOpcional(v, "data_confirmacao", true),
+    data_validacao: (v) => dataHoraOpcional(v, "data_validacao", true),
     valor_aplicado: (v) => valorPositivo(v, "Informe o valor_aplicado", "O valor_aplicado"),
     canal_validacao: (v) => opcaoOpcional(v, "canal_validacao inválido", CANAIS_VALIDACAO_VALIDOS),
     status: (v) => opcao(v, "Status inválido", STATUS_UTILIZACAO_VALIDOS),

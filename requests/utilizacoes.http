@@ -41,7 +41,7 @@ Content-Type: application/json
 {
   "status": "APROVADA",
   "canal_validacao": "APP_CONVENIADO",
-  "data_confirmacao": "2026-10-05 14:30:00"
+  "data_validacao": "2026-10-05 14:30:00"
 }
 
 ###

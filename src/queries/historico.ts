@@ -9,14 +9,14 @@ export const configuracaoHistorico: ConfiguracaoListagem = {
   ordenarPor: {
     id: "utilizacao.id",
     data_solicitacao: "utilizacao.data_solicitacao",
-    data_confirmacao: "utilizacao.data_confirmacao",
+    data_validacao: "utilizacao.data_validacao",
     valor_aplicado: "utilizacao.valor_aplicado",
     status: "utilizacao.status",
   },
   padrao: { ordenarPor: "data_solicitacao", ordem: "desc" },
   intervalo: ["de", "ate"],
   filtros: {
-    status: { tipo: "enum", coluna: "utilizacao.status", valores: ["PENDENTE", "APROVADA", "REPROVADA", "ESTORNADA"] },
+    status: { tipo: "enum", coluna: "utilizacao.status", valores: ["PENDENTE", "APROVADA", "REPROVADA", "ESTORNADA", "EXPIRADA", "CANCELADA"] },
     de: { tipo: "data", coluna: "utilizacao.data_solicitacao", operador: ">=", dataHora: true },
     ate: { tipo: "data", coluna: "utilizacao.data_solicitacao", operador: "<=", dataHora: true },
   },
@@ -35,7 +35,7 @@ export function criarBaseHistorico(conexao: Knex, dono: DonoHistorico) {
     .join("usuario", "usuario.id", "colaborador.usuario_id")
     .select(
       "utilizacao.id", "utilizacao.status", "utilizacao.valor_aplicado", "utilizacao.canal_validacao",
-      "utilizacao.data_solicitacao", "utilizacao.data_confirmacao", "utilizacao.observacoes",
+      "utilizacao.data_solicitacao", "utilizacao.data_validacao", "utilizacao.observacoes",
       "beneficio.id as beneficio_id", "item.id as item_campanha_id",
       conexao.raw("COALESCE(beneficio.nome, item.nome) as beneficio_nome"),
       conexao.raw("IF(beneficio.id IS NULL, 'CAMPANHA', 'BENEFICIO') as origem"),

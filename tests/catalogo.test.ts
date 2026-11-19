@@ -119,8 +119,8 @@ test("utilização: na alteração, colaborador e origem não mudam (fazem parte
   for (const campo of ["colaborador_id", "beneficio_conveniado_id", "beneficio_campanha_conveniado_id"]) {
     assert.match(erroDe(validarUtilizacao({ [campo]: 2 }, false))!, new RegExp(`^${campo} não pode ser alterado`));
   }
-  assert.deepEqual(validarUtilizacao({ status: "APROVADA", data_confirmacao: "2026-10-05 14:30:00" }, false), {
-    dados: { status: "APROVADA", data_confirmacao: "2026-10-05 14:30:00" },
+  assert.deepEqual(validarUtilizacao({ status: "APROVADA", data_validacao: "2026-10-05 14:30:00" }, false), {
+    dados: { status: "APROVADA", data_validacao: "2026-10-05 14:30:00" },
   });
 });
 
