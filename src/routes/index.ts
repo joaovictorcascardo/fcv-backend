@@ -13,6 +13,8 @@ import campanhaEventoRoutes from "./campanhaEventoRoutes";
 import beneficioCampanhaRoutes from "./beneficioCampanhaRoutes";
 import utilizacaoRoutes from "./utilizacaoRoutes";
 import euRoutes from "./euRoutes";
+import resgateRoutes from "./resgateRoutes";
+import validacaoRoutes from "./validacaoRoutes";
 
 const rotas = Router();
 rotas.use("/auth", authRoutes);
@@ -27,4 +29,6 @@ rotas.use("/campanhas", autenticar, campanhaEventoRoutes);
 rotas.use("/itens-campanha", autenticar, beneficioCampanhaRoutes);
 rotas.use("/utilizacoes", autenticar, permitir("FCV"), utilizacaoRoutes);
 rotas.use("/eu", autenticar, permitir("COLABORADOR", "CONVENIADO"), euRoutes);
+rotas.use("/resgates", autenticar, permitir("COLABORADOR"), resgateRoutes);
+rotas.use("/validacao", autenticar, permitir("CONVENIADO"), validacaoRoutes);
 export default rotas;
