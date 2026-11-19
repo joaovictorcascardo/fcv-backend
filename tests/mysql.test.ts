@@ -433,8 +433,33 @@ describe("listagens HTTP com MySQL real em banco novo e isolado", { skip: !habil
     }
   });
 
+  test("rotina de expiração: só vence pendente pela data, é idempotente e respeita a trava", async () => {
+    const { expirarResgates } = require("../src/jobs/expirarResgates") as typeof import("../src/jobs/expirarResgates");
+    const base = { colaborador_id: 1, beneficio_id: 1, valor_aplicado: 5, data_solicitacao: "2026-11-18 08:00:00" };
+    const ids = await banco!("utilizacao").insert([
+      { ...base, token_qrcode: randomUUID(), codigo_validacao: "ROT001", status: "PENDENTE", data_expiracao: "2026-11-18 09:59:59" },
+      { ...base, token_qrcode: randomUUID(), codigo_validacao: "ROT002", status: "PENDENTE", data_expiracao: "2026-11-18 10:00:01" },
+      { ...base, token_qrcode: randomUUID(), codigo_validacao: "ROT003", status: "CANCELADA", data_expiracao: "2026-11-18 09:00:00" },
+    ]);
+    const novos = await banco!("utilizacao").whereIn("codigo_validacao", ["ROT001", "ROT002", "ROT003"]).orderBy("codigo_validacao");
+    try {
+      const outra = await mysql.createConnection({ host: process.env.DB_HOST!, port: Number(process.env.DB_PORTA), user: process.env.DB_USUARIO!, password: process.env.DB_SENHA! });
+      await outra.query("SELECT GET_LOCK('fcv_expirar_resgates', 0)");
+      assert.equal(await expirarResgates(banco!, "2026-11-18 10:00:00"), null);
+      await outra.end();
+
+      assert.ok(Number(await expirarResgates(banco!, "2026-11-18 10:00:00")) >= 1);
+      assert.equal(await expirarResgates(banco!, "2026-11-18 10:00:00"), 0);
+      const depois = await banco!("utilizacao").whereIn("id", novos.map(n => n.id)).orderBy("codigo_validacao");
+      assert.deepEqual(depois.map(d => d.status), ["EXPIRADA", "PENDENTE", "CANCELADA"]);
+    } finally {
+      await banco!("utilizacao").whereIn("id", novos.map(n => n.id)).del();
+      assert.ok(ids.length);
+    }
+  });
+
   test("cancelamento e exclusão de cadastro mantêm o histórico no MySQL", async () => {
-    for (const [id, esperado] of [[1, "REPROVADA"], [3, "ESTORNADA"]] as const) {
+    for (const [id, esperado] of [[1, "CANCELADA"], [3, "ESTORNADA"]] as const) {
       const antes = await banco!("utilizacao").where({ id }).first();
       try {
         const resposta = await escrever("DELETE", `utilizacoes/${id}`);
