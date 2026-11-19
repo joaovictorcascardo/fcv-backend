@@ -67,7 +67,7 @@ export const utilizacaoModel = {
 };
 
 const statusDoCancelamento: Record<string, string> = {
-  PENDENTE: "REPROVADA",
+  PENDENTE: "CANCELADA",
   APROVADA: "ESTORNADA",
 };
 

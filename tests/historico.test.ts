@@ -36,8 +36,8 @@ async function executar(acao: Function, id = "5") {
   return resposta;
 }
 
-test("cancelamento de utilização: PENDENTE vira REPROVADA, APROVADA vira ESTORNADA", () => {
-  assert.equal(statusAoCancelar("PENDENTE"), "REPROVADA");
+test("cancelamento de utilização: PENDENTE vira CANCELADA, APROVADA vira ESTORNADA", () => {
+  assert.equal(statusAoCancelar("PENDENTE"), "CANCELADA");
   assert.equal(statusAoCancelar("APROVADA"), "ESTORNADA");
   assert.equal(statusAoCancelar("REPROVADA"), null);
   assert.equal(statusAoCancelar("ESTORNADA"), null);
@@ -72,7 +72,7 @@ test("DELETE /utilizacoes/:id: 404 sem registro, 409 se já encerrada ou se o st
   await comModel(utilizacaoModel, { buscarPorId: async () => undefined }, async () => {
     assert.equal((await executar(utilizacaoController.cancelar)).status, 404);
   });
-  for (const status of ["REPROVADA", "ESTORNADA"]) {
+  for (const status of ["REPROVADA", "ESTORNADA", "CANCELADA", "EXPIRADA"]) {
     await comModel(utilizacaoModel, {
       buscarPorId: async () => ({ id: 5, status }),
       cancelar: async () => assert.fail("não deveria alterar utilização encerrada"),
