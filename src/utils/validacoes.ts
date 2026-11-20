@@ -210,15 +210,77 @@ export function validarRazaoSocial(razao: unknown) {
   return { valor: limpo };
 }
 
-export function validarCategoria(categoria: unknown) {
-  if (!categoria || typeof categoria !== "string" || !categoria.trim()) {
-    return { erro: "Informe a categoria do conveniado", status: 400 };
+
+export const STATUS_CATEGORIA_VALIDOS = [
+  "ATIVO",
+  "INATIVO",
+] as const;
+
+export function validarNomeCategoria(nome: unknown) {
+  if (
+    !nome ||
+    typeof nome !== "string" ||
+    !nome.trim()
+  ) {
+    return {
+      erro: "Informe o nome da categoria",
+      status: 400,
+    };
   }
-  const limpo = categoria.trim();
+
+  const limpo = nome.trim();
+
   if (limpo.length > 60) {
-    return { erro: "A categoria não pode ter mais de 60 caracteres", status: 400 };
+    return {
+      erro: "O nome da categoria não pode ter mais de 60 caracteres",
+      status: 400,
+    };
   }
+
   return { valor: limpo };
+}
+
+export function validarStatusCategoria(status: unknown) {
+  if (status === undefined) {
+    return { valor: undefined };
+  }
+
+  if (
+    typeof status !== "string" ||
+    !STATUS_CATEGORIA_VALIDOS.includes(status as never)
+  ) {
+    return {
+      erro: "Status inválido. Use ATIVO ou INATIVO",
+      status: 400,
+    };
+  }
+
+  return { valor: status };
+}
+
+export function validarCategorias(categorias: unknown) {
+  if (
+    !Array.isArray(categorias) ||
+    categorias.length === 0
+  ) {
+    return {
+      erro: "Informe ao menos uma categoria em categorias (lista de ids)",
+      status: 400,
+    };
+  }
+
+  const ids = categorias.map((id) => validarId(id));
+
+  if (ids.some((id) => id === null)) {
+    return {
+      erro: "Cada categoria deve ser um id inteiro positivo",
+      status: 400,
+    };
+  }
+
+  return {
+    valor: [...new Set(ids as number[])],
+  };
 }
 
 export function validarCNPJConveniado(cnpj: unknown) {

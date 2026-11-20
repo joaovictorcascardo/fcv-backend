@@ -490,7 +490,7 @@ async function inserirFixtures(banco: Knex) {
     perfil_id: i < 3 ? 2 : i < 6 ? 3 : 1, status: i === 5 ? "INATIVO" : "ATIVO", data_criacao: "2026-10-24 12:00:00",
   })));
   await banco("colaborador").insert([1, 2, 3].map(id => ({ id, usuario_id: id, matricula: `M${id}`, setor: "Ensino", cargo: "Técnico", data_admissao: "2026-01-10", status: id === 3 ? "AFASTADO" : "ATIVO" })));
-  await banco("conveniado").insert([1, 2, 3].map(id => ({ id, usuario_id: id + 3, nome_fantasia: `Loja ${id}`, razao_social: `Loja ${id} LTDA`, categoria: "Alimentação", cnpj: `${id}`.padStart(14, "0"), endereco: `Rua ${id}`, status: id === 3 ? "EM_ANALISE" : "ATIVO" })));
+  await banco("conveniado").insert([1, 2, 3].map(id => ({ id, usuario_id: id + 3, nome_fantasia: `Loja ${id}`, razao_social: `Loja ${id} LTDA`, cnpj: `${id}`.padStart(14, "0"), endereco: `Rua ${id}`, status: id === 3 ? "EM_ANALISE" : "ATIVO" })));
   await banco("beneficio").insert([1, 2, 3].map(id => ({ id, nome: id < 3 ? "Mesmo nome" : "Plano 100%_!", descricao: id === 2 ? "Plano 100XX!" : "Benefício teste", tipo_beneficio: "VALOR_FIXO", valor: 10, quantidade_maxima_utilizacoes: 2, tipo_janela: "CALENDARIO_FIXO", unidade_ciclo: "MES", status: id === 3 ? "INATIVO" : "ATIVO" })));
   await banco("beneficio_conveniado").insert([1, 2, 3].map(id => ({ id, beneficio_id: id, conveniado_id: id, status: id === 3 ? "INATIVO" : "ATIVO" })));
   await banco("campanha_evento").insert([

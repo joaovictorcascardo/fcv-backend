@@ -96,8 +96,8 @@ Authorization: Bearer {{token}}
 GET {{api}}/usuarios?pagina=1&limite=2&status=ATIVO&dataInicio=2026-10-01&dataFim=2026-10-27&ordenarPor=data_criacao&ordem=desc
 Authorization: Bearer {{token}}
 
-### 200 — conveniados: categoria é igualdade, busca é substring
-GET {{api}}/conveniados?pagina=1&limite=2&status=ATIVO&busca=Farm&ordenarPor=nome_fantasia&ordem=asc
+### 200 — conveniados: categoria_id filtra pela categoria, busca é substring
+GET {{api}}/conveniados?pagina=1&limite=2&status=ATIVO&categoria_id=1&busca=Farm&ordenarPor=nome_fantasia&ordem=asc
 Authorization: Bearer {{token}}
 
 ### 200 — benefícios: enums do recurso

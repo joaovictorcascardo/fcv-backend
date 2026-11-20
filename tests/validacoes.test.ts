@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   validarCargo,
-  validarCategoria,
+  validarCategorias,
+  validarNomeCategoria,
+  validarStatusCategoria,
   validarCNPJConveniado,
   validarDataAdmissao,
   validarEmailUsuario,
@@ -101,6 +103,63 @@ test("validacoes de colaborador", () => {
   assert.equal(validarTelefone("1".repeat(21))?.status, 400);
 });
 
+test("validacoes de categoria", () => {
+  assert.deepEqual(
+    validarNomeCategoria(" Fitness "),
+    { valor: "Fitness" }
+  );
+
+  assert.equal(
+    validarNomeCategoria("")?.status,
+    400
+  );
+
+  assert.equal(
+    validarNomeCategoria("C".repeat(61))?.status,
+    400
+  );
+
+  assert.deepEqual(
+    validarStatusCategoria(undefined),
+    { valor: undefined }
+  );
+
+  assert.deepEqual(
+    validarStatusCategoria("INATIVO"),
+    { valor: "INATIVO" }
+  );
+
+    assert.equal(
+    validarStatusCategoria("EXCLUIDO")?.status,
+    400
+  );
+
+  assert.deepEqual(
+    validarCategorias([1, "2", 2]),
+    { valor: [1, 2] }
+  );
+
+  assert.equal(
+    validarCategorias([])?.status,
+    400
+  );
+
+  assert.equal(
+    validarCategorias(undefined)?.status,
+    400
+  );
+
+  assert.equal(
+    validarCategorias("Farmácia")?.status,
+    400
+  );
+
+  assert.equal(
+    validarCategorias([1, "x"])?.status,
+    400
+  );
+});
+
 test("validacoes de conveniado", () => {
   assert.deepEqual(validarNomeFantasia(" Padaria Pao Bom "), { valor: "Padaria Pao Bom" });
   assert.equal(validarNomeFantasia("")?.status, 400);
@@ -109,10 +168,6 @@ test("validacoes de conveniado", () => {
   assert.deepEqual(validarRazaoSocial(" Pao Bom Ltda "), { valor: "Pao Bom Ltda" });
   assert.equal(validarRazaoSocial("")?.status, 400);
   assert.equal(validarRazaoSocial("R".repeat(151))?.status, 400);
-
-  assert.deepEqual(validarCategoria(" Alimentacao "), { valor: "Alimentacao" });
-  assert.equal(validarCategoria("")?.status, 400);
-  assert.equal(validarCategoria("C".repeat(61))?.status, 400);
 
   assert.deepEqual(validarCNPJConveniado("44.555.666/0001-54"), { valor: "44555666000154" });
   assert.deepEqual(validarCNPJConveniado("44555666000154"), { valor: "44555666000154" });

@@ -1,6 +1,8 @@
 import type { Knex } from "knex";
 
 const tabelas = [
+  "conveniado_categoria",
+  "categoria_conveniado",
   "utilizacao",
   "beneficio_campanha_conveniado",
   "beneficio_campanha",

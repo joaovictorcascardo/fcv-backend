@@ -147,7 +147,7 @@ Content-Type: application/json
   "usuario_id": {{usuarioConv.response.body.$.id}},
   "nome_fantasia": "Padaria Pão Quente",
   "razao_social": "Pão Quente Alimentos Ltda",
-  "categoria": "Alimentação",
+  "categorias": [5],
   "cnpj": "99888777000155",
   "endereco": "Rua Barão do Monte Alto, 500, Muriaé"
 }
@@ -161,7 +161,7 @@ Content-Type: application/json
   "usuario_id": 3,
   "nome_fantasia": "Outra Padaria",
   "razao_social": "Outra Padaria Ltda",
-  "categoria": "Alimentação",
+  "categorias": [5],
   "cnpj": "99888777000155",
   "endereco": "Rua Principal, 100"
 }
@@ -175,7 +175,7 @@ Content-Type: application/json
   "usuario_id": 3,
   "nome_fantasia": "Padaria Inválida",
   "razao_social": "Padaria Inválida Ltda",
-  "categoria": "Alimentação",
+  "categorias": [5],
   "cnpj": "123",
   "endereco": "Rua Central, 50"
 }
