@@ -51,6 +51,51 @@ const parametroId = {
   schema: { type: "integer", minimum: 1 },
 };
 
+const jsonResposta = (schema: object) => ({ content: { "application/json": { schema } } });
+const parametroBusca = (description: string) => ({ name: "busca", in: "query", required: false, description, schema: { type: "string", maxLength: 100 } });
+const parametroCategoria = { name: "categoria_id", in: "query", required: false, description: "Id da categoria", schema: { type: "integer", minimum: 1 } };
+const parametroCodigo = {
+  name: "codigo",
+  in: "path",
+  required: true,
+  description: "Conteúdo do QR (token_qrcode) ou o código de 6 letras",
+  schema: { type: "string", example: "2X6MPN" },
+};
+
+function decisao(summary: string, description: string) {
+  return {
+    parameters: [parametroCodigo],
+    post: {
+      tags: ["Validação"],
+      summary,
+      description,
+      requestBody: {
+        required: false,
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                canal_validacao: { ...opcoes(["APP_CONVENIADO", "TERMINAL_IOT"], "APP_CONVENIADO"), description: "O totem envia TERMINAL_IOT" },
+                motivo: { type: "string", maxLength: 500 },
+              },
+            },
+            example: { canal_validacao: "APP_CONVENIADO" },
+          },
+        },
+      },
+      responses: {
+        200: { description: "Resgate com o novo status", ...jsonResposta({ $ref: "#/components/schemas/Resgate" }) },
+        400: { description: "canal_validacao ou motivo inválido", ...erro("canal_validacao inválido. Use APP_CONVENIADO ou TERMINAL_IOT") },
+        404: { description: "Não existe ou não é aceito neste estabelecimento", ...erro("Resgate não encontrado neste estabelecimento. Confira o código e se o benefício é aceito aqui") },
+        409: { description: "Expirado, já decidido (inclusive por outra leitura ao mesmo tempo), benefício ou colaborador inativo", ...erro("Este resgate já foi aprovado") },
+        429: { description: "Muitos códigos errados", ...erro("Muitos códigos errados. Tente de novo em 15 minuto(s)") },
+        ...respostasComuns,
+      },
+    },
+  };
+}
+
 type Recurso = {
   caminho: string;
   tag: string;
@@ -275,12 +320,20 @@ const schemas = {
       usuario_id: inteiro,
       nome_fantasia: texto(150),
       razao_social: texto(150),
-      categoria: texto(60),
+      categorias: { type: "array", minItems: 1, items: inteiroPositivo, description: "Ids das categorias (ao menos uma). Na resposta vem a lista de categorias com id, nome e status", example: [1, 2] },
       cnpj: { type: "string", minLength: 14, maxLength: 14, description: "Exatamente 14 dígitos numéricos" },
       endereco: texto(255),
       status: opcoes(["ATIVO", "INATIVO", "EM_ANALISE"], "EM_ANALISE"),
     },
-    ["usuario_id", "nome_fantasia", "razao_social", "categoria", "cnpj", "endereco"],
+    ["usuario_id", "nome_fantasia", "razao_social", "categorias", "cnpj", "endereco"],
+  ),
+  ...modelo(
+    "Categoria",
+    {
+      nome: textoObrigatorio(60),
+      status: opcoes(["ATIVO", "INATIVO"], "ATIVO"),
+    },
+    ["nome"],
   ),
   ...modelo(
     "Beneficio",
@@ -356,32 +409,103 @@ const schemas = {
       data_validacao: { ...opcional(dataHora), description: "AAAA-MM-DD HH:MM:SS" },
       valor_aplicado: positivo(),
       canal_validacao: opcional(opcoes(["APP_CONVENIADO", "TERMINAL_IOT"])),
-      status: opcoes(["PENDENTE", "APROVADA", "REPROVADA", "ESTORNADA"], "PENDENTE"),
+      status: opcoes(["PENDENTE", "APROVADA", "REPROVADA", "ESTORNADA", "EXPIRADA", "CANCELADA"], "PENDENTE"),
       observacoes: opcional(textoLivre),
     },
     ["colaborador_id", "valor_aplicado"],
-    {},
+    {
+      beneficio_id: { ...inteiro, nullable: true, description: "Benefício do resgate, gravado já na solicitação" },
+      codigo_validacao: { type: "string", nullable: true, description: "Código de 6 letras para digitar quando o QR não funciona" },
+      data_expiracao: { ...opcional(dataHora), description: "Prazo para validar: o menor entre solicitação + 3 horas e o fim do ciclo do benefício" },
+    },
     ["colaborador_id", "beneficio_conveniado_id", "beneficio_campanha_conveniado_id"],
   ),
   UtilizacaoDoUsuario: {
     type: "object",
     properties: {
       id: inteiro,
-      status: opcoes(["PENDENTE", "APROVADA", "REPROVADA", "ESTORNADA"]),
+      status: { ...opcoes(["PENDENTE", "APROVADA", "REPROVADA", "ESTORNADA", "EXPIRADA", "CANCELADA"]), description: "PENDENTE com prazo vencido já vem como EXPIRADA, mesmo antes da rotina rodar" },
       valor_aplicado: decimal,
       canal_validacao: opcional(opcoes(["APP_CONVENIADO", "TERMINAL_IOT"])),
       data_solicitacao: dataHora,
+      data_expiracao: opcional(dataHora),
       data_validacao: opcional(dataHora),
       observacoes: opcional(textoLivre),
       origem: opcoes(["BENEFICIO", "CAMPANHA"]),
       beneficio_id: { ...inteiro, nullable: true, description: "Preenchido quando a origem é BENEFICIO" },
       item_campanha_id: { ...inteiro, nullable: true, description: "Preenchido quando a origem é CAMPANHA" },
       beneficio_nome: textoLivre,
-      conveniado_id: inteiro,
-      conveniado_nome_fantasia: textoLivre,
-      conveniado_categoria: textoLivre,
-      conveniado_endereco: textoLivre,
+      conveniado_id: { ...inteiro, nullable: true, description: "null até o resgate ser validado" },
+      conveniado_nome_fantasia: opcional(textoLivre),
+      conveniado_endereco: opcional(textoLivre),
       colaborador_nome: textoLivre,
+    },
+  },
+  Resgate: {
+    type: "object",
+    properties: {
+      id: inteiro,
+      status: opcoes(["PENDENTE", "APROVADA", "REPROVADA", "ESTORNADA", "EXPIRADA", "CANCELADA"]),
+      token_qrcode: { type: "string", description: "Conteúdo do QR Code" },
+      codigo_validacao: { type: "string", example: "2X6MPN", description: "Código de 6 letras para mostrar embaixo do QR" },
+      data_solicitacao: dataHora,
+      data_expiracao: { ...dataHora, description: "O menor entre solicitação + 3 horas e o fim do ciclo do benefício" },
+      data_validacao: opcional(dataHora),
+      valor_aplicado: decimal,
+      canal_validacao: opcional(opcoes(["APP_CONVENIADO", "TERMINAL_IOT"])),
+      observacoes: opcional(textoLivre),
+      colaborador_id: inteiro,
+      colaborador_nome: textoLivre,
+      beneficio_id: inteiro,
+      beneficio_nome: textoLivre,
+      beneficio_descricao: opcional(textoLivre),
+      tipo_beneficio: textoLivre,
+      beneficio_valor: decimal,
+      conveniado_id: { ...inteiro, nullable: true, description: "null até a validação" },
+      conveniado_nome: opcional(textoLivre),
+      segundos_restantes: { ...inteiro, description: "Tempo até expirar; 0 quando não está mais pendente" },
+    },
+  },
+  ResgateAguardando: {
+    type: "object",
+    properties: {
+      id: inteiro,
+      status: { type: "string", example: "PENDENTE" },
+      token_qrcode: textoLivre,
+      codigo_validacao: textoLivre,
+      data_solicitacao: dataHora,
+      data_expiracao: dataHora,
+      valor_aplicado: decimal,
+      beneficio_id: inteiro,
+      beneficio_nome: textoLivre,
+      tipo_beneficio: textoLivre,
+      beneficio_valor: decimal,
+      segundos_restantes: inteiro,
+    },
+  },
+  CategoriaResumo: { type: "object", properties: { id: inteiro, nome: textoLivre } },
+  BeneficioCatalogo: {
+    type: "object",
+    properties: {
+      id: inteiro,
+      nome: textoLivre,
+      descricao: opcional(textoLivre),
+      tipo_beneficio: opcoes(["PERCENTUAL", "VALOR_FIXO"]),
+      valor: decimal,
+      quantidade_maxima_utilizacoes: inteiro,
+      tipo_janela: opcoes(["CALENDARIO_FIXO", "JANELA_MOVEL"]),
+      unidade_ciclo: opcional(opcoes(["ANO", "MES", "SEMANA"])),
+      intervalo_valor: opcional(inteiro),
+      intervalo_unidade: opcional(opcoes(["DIA", "MES"])),
+    },
+  },
+  LocalCatalogo: {
+    type: "object",
+    properties: {
+      id: inteiro,
+      nome_fantasia: textoLivre,
+      endereco: textoLivre,
+      categorias: { type: "array", items: { $ref: "#/components/schemas/CategoriaResumo" } },
     },
   },
   UsuarioLogado: {
@@ -545,7 +669,15 @@ export const documentacao = {
   },
   servers: [{ url: "/api/v1" }],
   security: [{ bearerAuth: [] }],
-  tags: [{ name: "Autenticação" }, { name: "Meus dados" }, ...recursos.map((r) => ({ name: r.tag }))],
+  tags: [
+    { name: "Autenticação" },
+    { name: "Meus dados" },
+    { name: "Catálogo do app", description: "Telas do aplicativo do colaborador: resumo, benefícios e locais" },
+    { name: "Resgate", description: "Etapa A: o colaborador pede o resgate sem escolher o local e recebe o QR" },
+    { name: "Validação", description: "Etapa B: o conveniado lê o QR ou digita o código e aprova ou reprova" },
+    { name: "Categorias" },
+    ...recursos.map((r) => ({ name: r.tag })),
+  ],
   paths: {
     "/auth/login": {
       post: {
@@ -737,7 +869,7 @@ export const documentacao = {
         tags: ["Meus dados"],
         summary: "Histórico de utilizações de quem está logado",
         description:
-          "Colaborador recebe somente suas utilizações; conveniado somente as do estabelecimento autenticado. Sem pagina/limite preserva array completo; enviar qualquer um ativa o envelope. Padrão: data_solicitacao desc, desempate por id asc. O mesmo dono e os mesmos filtros restringem os dados e o total. IDs de dono na query não são aceitos. Escopo FCV recebe 403 e usa GET /utilizacoes.",
+          "Colaborador recebe somente suas utilizações dos últimos 6 meses (envie de para olhar mais longe); conveniado somente as validadas no estabelecimento autenticado. Todos os status. busca procura no nome e na descrição do benefício. PENDENTE vencido já vem como EXPIRADA. Sem pagina/limite preserva array completo; enviar qualquer um ativa o envelope. Padrão: data_solicitacao desc, desempate por id asc. O mesmo dono e os mesmos filtros restringem os dados e o total. IDs de dono na query não são aceitos. Escopo FCV recebe 403 e usa GET /utilizacoes.",
         parameters: parametrosConsulta({ ...configuracaoHistorico, periodo: "Dia válido de 1000-01-01 a 9999-12-31, no formato AAAA-MM-DD. de não pode superar ate; inclui todo o dia final." }),
         responses: {
           200: {
@@ -766,6 +898,200 @@ export const documentacao = {
             description: "Usuário sem cadastro de colaborador ou conveniado",
             ...erro("Cadastro de colaborador ou conveniado não encontrado"),
           },
+        },
+      },
+    },
+    "/eu/aguardando": {
+      get: {
+        tags: ["Meus dados"],
+        summary: "Resgates do colaborador aguardando validação",
+        description: "Só os PENDENTE ainda no prazo (confere a data, não só o status), do que expira primeiro para o último. Serve para a Home do app mostrar o QR de novo e o tempo restante. Só COLABORADOR.",
+        responses: {
+          200: { description: "Lista, vazia quando não há nenhum", ...jsonResposta({ type: "array", items: { $ref: "#/components/schemas/ResgateAguardando" } }) },
+          ...respostasComuns,
+          403: { description: "Escopo FCV ou CONVENIADO", ...erro("Seu perfil não tem acesso a esta rota") },
+        },
+      },
+    },
+    "/catalogo/resumo": {
+      get: {
+        tags: ["Catálogo do app"],
+        summary: "Resumo da Home",
+        description: "Quantidade de benefícios disponíveis e de conveniados.",
+        responses: {
+          200: { description: "Resumo", ...jsonResposta({ type: "object", properties: { beneficios_disponiveis: inteiro, conveniados: inteiro } }) },
+          ...respostasComuns,
+        },
+      },
+    },
+    "/catalogo/beneficios": {
+      get: {
+        tags: ["Catálogo do app"],
+        summary: "Benefícios ativos com busca e filtro por categoria",
+        description: "categoria_id traz os benefícios que têm algum conveniado daquela categoria.",
+        parameters: [parametroBusca("Procura no nome e na descrição do benefício"), parametroCategoria],
+        responses: {
+          200: {
+            description: "Lista de benefícios",
+            ...jsonResposta({ type: "array", items: { allOf: [{ $ref: "#/components/schemas/BeneficioCatalogo" }, { type: "object", properties: { total_locais: inteiro, categorias: { type: "array", items: { $ref: "#/components/schemas/CategoriaResumo" } } } }] } }),
+          },
+          400: { description: "busca ou categoria_id inválido", ...erro("categoria_id deve ser um número inteiro positivo") },
+          ...respostasComuns,
+        },
+      },
+    },
+    "/catalogo/beneficios/{id}": {
+      parameters: [parametroId],
+      get: {
+        tags: ["Catálogo do app"],
+        summary: "Detalhe do benefício com os locais onde usar",
+        responses: {
+          200: {
+            description: "Benefício",
+            ...jsonResposta({ allOf: [{ $ref: "#/components/schemas/BeneficioCatalogo" }, { type: "object", properties: { categorias: { type: "array", items: { $ref: "#/components/schemas/CategoriaResumo" } }, locais: { type: "array", items: { $ref: "#/components/schemas/LocalCatalogo" } } } }] }),
+          },
+          400: { description: "ID inválido", ...erro("ID inválido. Informe um número inteiro positivo") },
+          404: { description: "Não existe ou não está ativo", ...erro("Benefício não encontrado ou inativo") },
+          ...respostasComuns,
+        },
+      },
+    },
+    "/catalogo/locais": {
+      get: {
+        tags: ["Catálogo do app"],
+        summary: "Locais (conveniados ativos com benefício ativo)",
+        parameters: [parametroBusca("Procura no nome do local"), parametroCategoria],
+        responses: {
+          200: { description: "Lista de locais", ...jsonResposta({ type: "array", items: { allOf: [{ $ref: "#/components/schemas/LocalCatalogo" }, { type: "object", properties: { total_beneficios: inteiro } }] } }) },
+          400: { description: "busca ou categoria_id inválido", ...erro("categoria_id deve ser um número inteiro positivo") },
+          ...respostasComuns,
+        },
+      },
+    },
+    "/catalogo/locais/{id}": {
+      parameters: [parametroId],
+      get: {
+        tags: ["Catálogo do app"],
+        summary: "Detalhe do local com categorias e benefícios ativos",
+        responses: {
+          200: {
+            description: "Local",
+            ...jsonResposta({ allOf: [{ $ref: "#/components/schemas/LocalCatalogo" }, { type: "object", properties: { razao_social: textoLivre, beneficios: { type: "array", items: { $ref: "#/components/schemas/BeneficioCatalogo" } } } }] }),
+          },
+          400: { description: "ID inválido", ...erro("ID inválido. Informe um número inteiro positivo") },
+          404: { description: "Não existe ou não está ativo", ...erro("Local não encontrado ou inativo") },
+          ...respostasComuns,
+        },
+      },
+    },
+    "/resgates": {
+      post: {
+        tags: ["Resgate"],
+        summary: "Colaborador pede o resgate de um benefício",
+        description: "Cria a utilização PENDENTE sem conveniado. A expiração é o menor entre agora + 3 horas e o fim do ciclo (CALENDARIO_FIXO); na JANELA_MOVEL vale só as 3 horas. PENDENTE e APROVADA contam no limite do ciclo; só um PENDENTE por benefício. Mostre o QR com token_qrcode e o codigo_validacao em texto embaixo. Só COLABORADOR.",
+        requestBody: { required: true, content: { "application/json": { schema: { type: "object", required: ["beneficio_id"], properties: { beneficio_id: inteiroPositivo } }, example: { beneficio_id: 1 } } } },
+        responses: {
+          201: { description: "Resgate criado", ...jsonResposta({ $ref: "#/components/schemas/Resgate" }) },
+          400: { description: "beneficio_id faltando ou inválido", ...erro("Informe o beneficio_id (número inteiro positivo)") },
+          404: { description: "Benefício inexistente", ...erro("Benefício não encontrado") },
+          409: { description: "Benefício inativo ou sem local, já existe um pendente (vem utilizacao_id e data_expiracao) ou limite do ciclo atingido", ...erro("Você já tem um resgate deste benefício aguardando validação") },
+          ...respostasComuns,
+          403: { description: "Não é COLABORADOR ou o colaborador não está ativo", ...erro("Seu perfil não tem acesso a esta rota") },
+        },
+      },
+    },
+    "/resgates/{id}": {
+      parameters: [parametroId],
+      get: {
+        tags: ["Resgate"],
+        summary: "Situação de um resgate do colaborador",
+        description: "Use para atualizar a tela do QR: quando status deixa de ser PENDENTE, o resgate foi validado, reprovado, cancelado ou expirou. Só o dono vê.",
+        responses: {
+          200: { description: "Resgate", ...jsonResposta({ $ref: "#/components/schemas/Resgate" }) },
+          404: { description: "Não existe ou é de outro colaborador", ...erro("Resgate não encontrado") },
+          ...respostasComuns,
+        },
+      },
+    },
+    "/resgates/{id}/cancelar": {
+      parameters: [parametroId],
+      post: {
+        tags: ["Resgate"],
+        summary: "Colaborador desiste do resgate pendente",
+        description: "PENDENTE vira CANCELADA e deixa de contar no limite.",
+        responses: {
+          200: { description: "Cancelado", ...jsonResposta({ $ref: "#/components/schemas/Resgate" }) },
+          404: { description: "Não existe ou é de outro colaborador", ...erro("Resgate não encontrado") },
+          409: { description: "Já não está pendente", ...erro("Este resgate já foi aprovado") },
+          ...respostasComuns,
+        },
+      },
+    },
+    "/validacao/{codigo}": {
+      parameters: [parametroCodigo],
+      get: {
+        tags: ["Validação"],
+        summary: "Conveniado confere o resgate antes de decidir",
+        description: "Aceita o conteúdo lido do QR (token_qrcode) ou o código de 6 letras digitado (maiúsculas ou minúsculas). Resgate inexistente e benefício não aceito neste estabelecimento recebem a mesma resposta 404. Depois de 10 códigos errados em 15 minutos, responde 429. Só CONVENIADO.",
+        responses: {
+          200: { description: "Resgate pendente e aceito aqui", ...jsonResposta({ $ref: "#/components/schemas/Resgate" }) },
+          404: { description: "Não existe ou não é aceito neste estabelecimento", ...erro("Resgate não encontrado neste estabelecimento. Confira o código e se o benefício é aceito aqui") },
+          409: { description: "Expirado (grava EXPIRADA na hora), já decidido, benefício ou colaborador inativo. Vem também o campo status", ...erro("Este resgate expirou. Peça para o colaborador solicitar de novo") },
+          429: { description: "Muitos códigos errados", ...erro("Muitos códigos errados. Tente de novo em 15 minuto(s)") },
+          ...respostasComuns,
+          403: { description: "Não é CONVENIADO", ...erro("Seu perfil não tem acesso a esta rota") },
+        },
+      },
+    },
+    "/validacao/{codigo}/aprovar": decisao("Aprova o resgate", "Confere tudo de novo (pendente, prazo, estabelecimento, benefício e colaborador ativos) e muda para APROVADA com uma atualização condicional: se duas leituras chegarem juntas, só uma aprova. Grava o conveniado, a data da validação e o canal."),
+    "/validacao/{codigo}/reprovar": decisao("Reprova o resgate", "Mesmas conferências da aprovação; muda para REPROVADA e grava o motivo nas observações, se enviado."),
+    "/categorias": {
+      get: {
+        tags: ["Categorias"],
+        summary: "Lista as categorias de conveniado",
+        description: "Ordenadas por nome. Qualquer usuário logado.",
+        parameters: [{ name: "status", in: "query", required: false, schema: opcoes(["ATIVO", "INATIVO"]) }],
+        responses: { 200: { description: "Lista", ...jsonResposta({ type: "array", items: { $ref: "#/components/schemas/Categoria" } }) }, ...respostasComuns },
+      },
+      post: {
+        tags: ["Categorias"],
+        summary: "Cria uma categoria",
+        requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/CategoriaEntrada" }, example: { nome: "Educação" } } } },
+        responses: {
+          201: { description: "Criada", ...jsonResposta({ $ref: "#/components/schemas/Categoria" }) },
+          400: { description: "Nome vazio ou longo demais", ...erro("Informe o nome da categoria") },
+          409: { description: "Nome repetido", ...erro("Já existe uma categoria com esse nome") },
+          ...respostasFcv,
+        },
+      },
+    },
+    "/categorias/{id}": {
+      parameters: [parametroId],
+      get: {
+        tags: ["Categorias"],
+        summary: "Mostra uma categoria",
+        responses: { 200: { description: "Categoria", ...jsonResposta({ $ref: "#/components/schemas/Categoria" }) }, 404: { description: "Não existe", ...erro("Categoria não encontrada") }, ...respostasComuns },
+      },
+      put: {
+        tags: ["Categorias"],
+        summary: "Altera nome ou status",
+        requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/CategoriaAlteracao" }, example: { status: "INATIVO" } } } },
+        responses: {
+          200: { description: "Alterada", ...jsonResposta({ $ref: "#/components/schemas/Categoria" }) },
+          404: { description: "Não existe", ...erro("Categoria não encontrada") },
+          409: { description: "Nome repetido", ...erro("Já existe uma categoria com esse nome") },
+          ...respostasFcv,
+        },
+      },
+      delete: {
+        tags: ["Categorias"],
+        summary: "Exclui uma categoria sem conveniados",
+        description: "Com conveniado vinculado responde 409: inative alterando o status para INATIVO.",
+        responses: {
+          204: { description: "Excluída" },
+          404: { description: "Não existe", ...erro("Categoria não encontrada") },
+          409: { description: "Tem conveniados vinculados", ...erro("Esta categoria tem 1 conveniado(s) vinculado(s). Inative a categoria alterando o status para INATIVO") },
+          ...respostasFcv,
         },
       },
     },
