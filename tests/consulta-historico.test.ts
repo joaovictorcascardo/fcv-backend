@@ -64,3 +64,31 @@ test("histórico: formato legado preserva array e ordenação com desempate; dia
     assert.equal(consultas[0].bindings.at(-1), "9999-12-31 23:59:59.999999");
   } finally { await banco.destroy(); }
 });
+
+test("histórico: busca procura no nome e na descrição do benefício e do item de campanha", async () => {
+  const { banco, consultas } = capturarConsultas();
+  try {
+    await listarHistorico(banco, { colaborador_id: 1 }, { busca: "farm" });
+    assert.match(consultas[0].sql, /`beneficio`\.`nome` LIKE \? ESCAPE '!' or `beneficio`\.`descricao` LIKE \? ESCAPE '!'/);
+    assert.ok(consultas[0].bindings.includes("%farm%"));
+  } finally { await banco.destroy(); }
+});
+
+test("histórico: PENDENTE e EXPIRADA são filtrados pela data de expiração", async () => {
+  const { banco, consultas } = capturarConsultas();
+  try {
+    await listarHistorico(banco, { colaborador_id: 1 }, { status: "PENDENTE" });
+    await listarHistorico(banco, { colaborador_id: 1 }, { status: "EXPIRADA" });
+    assert.match(consultas[0].sql, /`utilizacao`\.`status` = \? and `utilizacao`\.`data_expiracao` > \?/);
+    assert.match(consultas[1].sql, /`utilizacao`\.`status` = \? or \(`utilizacao`\.`status` = \? and `utilizacao`\.`data_expiracao` <= \?\)/);
+  } finally { await banco.destroy(); }
+});
+
+test("histórico: o benefício vem direto da utilização, mesmo sem conveniado", async () => {
+  const { banco, consultas } = capturarConsultas();
+  try {
+    await listarHistorico(banco, { colaborador_id: 1 }, {});
+    assert.match(consultas[0].sql, /left join `beneficio` on `beneficio`\.`id` = `utilizacao`\.`beneficio_id`/);
+    assert.match(consultas[0].sql, /`utilizacao`\.`data_expiracao`/);
+  } finally { await banco.destroy(); }
+});
