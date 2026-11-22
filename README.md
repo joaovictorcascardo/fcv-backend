@@ -104,8 +104,21 @@ Resumo das rotas (todas começam com `/api/v1`):
 | `/campanhas` | Ver: usuário logado. Criar, alterar e excluir: escopo FCV | Campanhas e eventos com período definido |
 | `/itens-campanha` | Ver: usuário logado. Criar, alterar e excluir: escopo FCV | Benefícios que fazem parte de uma campanha |
 | `/ofertas-campanha` | Ver: usuário logado. Criar, alterar e excluir: escopo FCV | Qual conveniado oferece qual item de campanha |
-| `/utilizacoes` | Escopo FCV | Cada uso de um benefício, com token do QR Code e status |
-| `/eu/utilizacoes` | Colaborador e conveniado logados | Histórico de quem está logado, com filtros `status`, `de` e `ate` |
+| `/utilizacoes` | Escopo FCV | Cada uso de um benefício, com QR, prazo e status (`PENDENTE`, `APROVADA`, `REPROVADA`, `ESTORNADA`, `EXPIRADA`, `CANCELADA`) |
+| `/eu/utilizacoes` | Colaborador e conveniado logados | Histórico: colaborador vê os últimos 6 meses (`busca`, `status`, `de`, `ate`); conveniado vê os resgates validados nele |
+| `/eu/aguardando` | Colaborador | Resgates pedidos e ainda no prazo, com o tempo restante |
+| `/categorias` | Ver: usuário logado. Criar, alterar e excluir: escopo FCV | Categorias do conveniado (com conveniado vinculado não exclui, só inativa) |
+| `/catalogo/resumo`, `/catalogo/beneficios`, `/catalogo/locais` | Usuário logado | Telas do app: resumo da Home, benefícios e locais com `busca` e `categoria_id`, e o detalhe de cada um (`/:id`) |
+| `POST /resgates`, `GET /resgates/:id`, `POST /resgates/:id/cancelar` | Colaborador | Etapa A do resgate: pede o benefício sem escolher o local e recebe o QR e o código de 6 letras |
+| `GET /validacao/:codigo`, `POST /validacao/:codigo/aprovar` e `/reprovar` | Conveniado | Etapa B: confere e decide pelo conteúdo do QR ou pelo código digitado |
+
+### Como funciona o resgate
+
+1. O colaborador chama `POST /resgates` com o `beneficio_id`. Nasce uma utilização `PENDENTE`, sem conveniado.
+2. O prazo (`data_expiracao`) é o menor entre agora + 3 horas e o fim do ciclo do benefício. Na janela móvel vale só as 3 horas.
+3. `PENDENTE` e `APROVADA` contam no limite do ciclo, e só pode haver um `PENDENTE` por benefício.
+4. O conveniado lê o QR (`token_qrcode`) ou digita o código e chama `/validacao/:codigo/aprovar` ou `/reprovar`. Só aí o conveniado e a data da validação são gravados.
+5. Uma rotina roda a cada 5 minutos (`EXPIRACAO_MINUTOS` no `.env`) e marca como `EXPIRADA` o que venceu. Usa `GET_LOCK` do MySQL para rodar uma vez só, mesmo com mais de uma instância. Como toda leitura confere a data, um pendente vencido já aparece como `EXPIRADA` antes da rotina passar.
 
 Fora o `/auth`, todas têm as cinco operações: `GET /rota` lista, `GET /rota/:id` mostra um, `POST /rota` cria, `PUT /rota/:id` altera (envie só os campos que mudaram) e `DELETE /rota/:id` exclui. A exceção é `/utilizacoes`: o `DELETE` cancela pelo status e nunca apaga (veja a [seção 10](#10-s4-06--preservação-do-histórico)).
 
