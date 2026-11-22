@@ -90,3 +90,15 @@ Authorization: Bearer {{admin}}
 ###
 GET {{api}}/eu/utilizacoes
 Authorization: Bearer {{admin}}
+
+### Histórico dos últimos 6 meses com busca pelo benefício
+GET {{api}}/eu/utilizacoes?busca=farm
+Authorization: Bearer {{colaborador}}
+
+### Pendentes vencidos entram em EXPIRADA mesmo antes da rotina rodar
+GET {{api}}/eu/utilizacoes?status=EXPIRADA
+Authorization: Bearer {{colaborador}}
+
+### Resgates aguardando validação, com o tempo restante
+GET {{api}}/eu/aguardando
+Authorization: Bearer {{colaborador}}
