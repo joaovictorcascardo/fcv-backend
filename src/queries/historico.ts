@@ -25,7 +25,7 @@ export const configuracaoHistorico: ConfiguracaoListagem = {
 export function criarBaseHistorico(conexao: Knex, dono: DonoHistorico) {
   const consulta = conexao("utilizacao")
     .leftJoin("beneficio_conveniado as bc", "bc.id", "utilizacao.beneficio_conveniado_id")
-    .leftJoin("beneficio", "beneficio.id", "bc.beneficio_id")
+    .leftJoin("beneficio", "beneficio.id", "utilizacao.beneficio_id")
     .leftJoin("beneficio_campanha_conveniado as bcc", "bcc.id", "utilizacao.beneficio_campanha_conveniado_id")
     .leftJoin("beneficio_campanha as item", "item.id", "bcc.beneficio_campanha_id")
     .leftJoin("conveniado", function () {
@@ -35,7 +35,7 @@ export function criarBaseHistorico(conexao: Knex, dono: DonoHistorico) {
     .join("usuario", "usuario.id", "colaborador.usuario_id")
     .select(
       "utilizacao.id", "utilizacao.status", "utilizacao.valor_aplicado", "utilizacao.canal_validacao",
-      "utilizacao.data_solicitacao", "utilizacao.data_validacao", "utilizacao.observacoes",
+      "utilizacao.data_solicitacao", "utilizacao.data_expiracao", "utilizacao.data_validacao", "utilizacao.observacoes",
       "beneficio.id as beneficio_id", "item.id as item_campanha_id",
       conexao.raw("COALESCE(beneficio.nome, item.nome) as beneficio_nome"),
       conexao.raw("IF(beneficio.id IS NULL, 'CAMPANHA', 'BENEFICIO') as origem"),
