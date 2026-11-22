@@ -1,7 +1,9 @@
 import { Request, Response } from "express";
+import db from "../database/db";
 import { acessoModel } from "../models/acessoModel";
 import { utilizacaoModel } from "../models/utilizacaoModel";
-import { agora, mesesAtras } from "../utils/tempo";
+import { listarAguardando } from "../queries/aguardando";
+import { agora, mesesAtras, segundosEntre } from "../utils/tempo";
 
 type Registro = Record<string, any>;
 
@@ -34,5 +36,16 @@ export const euController = {
       return;
     }
     res.json({ ...lista, dados: lista.dados.map((item) => statusPelaData(item, momento)) });
+  },
+
+  async aguardando(_req: Request, res: Response) {
+    const { colaborador } = await acessoModel.buscarDados(res.locals.usuario.id, "COLABORADOR");
+    if (!colaborador) {
+      res.status(404).json({ erro: "Cadastro de colaborador não encontrado" });
+      return;
+    }
+    const momento = agora();
+    const lista = await listarAguardando(db, colaborador.id, momento);
+    res.json(lista.map((item) => ({ ...item, segundos_restantes: Math.max(0, segundosEntre(momento, item.data_expiracao)) })));
   },
 };
