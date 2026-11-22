@@ -1,4 +1,5 @@
 import type { Knex } from "knex";
+import { agora, somarHoras } from "../../utils/tempo";
 
 export async function seed(knex: Knex): Promise<void> {
   await knex("utilizacao").insert([
@@ -21,6 +22,20 @@ export async function seed(knex: Knex): Promise<void> {
       data_solicitacao: "2026-10-03 10:20:00", data_expiracao: "2026-10-03 13:20:00", data_validacao: "2026-10-03 10:21:00",
       valor_aplicado: 9.9, canal_validacao: "APP_CONVENIADO", status: "REPROVADA",
       observacoes: "Receita médica vencida",
+    },
+  ]);
+
+  const momento = agora();
+  await knex("utilizacao").insert([
+    {
+      id: 5, colaborador_id: 1, beneficio_id: 1, token_qrcode: "seed-token-0005", codigo_validacao: "FCV005",
+      data_solicitacao: somarHoras(momento, -1), data_expiracao: somarHoras(momento, 2),
+      valor_aplicado: 15, status: "PENDENTE",
+    },
+    {
+      id: 6, colaborador_id: 2, beneficio_id: 2, token_qrcode: "seed-token-0006", codigo_validacao: "FCV006",
+      data_solicitacao: somarHoras(momento, -4), data_expiracao: somarHoras(momento, -1),
+      valor_aplicado: 50, status: "PENDENTE",
     },
   ]);
 }
