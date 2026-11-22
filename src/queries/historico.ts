@@ -16,6 +16,7 @@ export const configuracaoHistorico: ConfiguracaoListagem = {
   },
   padrao: { ordenarPor: "data_solicitacao", ordem: "desc" },
   intervalo: ["de", "ate"],
+  busca: ["beneficio.nome", "beneficio.descricao", "item.nome", "item.descricao"],
   filtros: {
     status: {
       tipo: "enum",
