@@ -1,5 +1,6 @@
 import type { Knex } from "knex";
 import { listarComConsulta, type ConfiguracaoListagem } from "./listagem";
+import { agora } from "../utils/tempo";
 
 export type DonoHistorico =
   | { colaborador_id: number; conveniado_id?: never }
@@ -16,7 +17,24 @@ export const configuracaoHistorico: ConfiguracaoListagem = {
   padrao: { ordenarPor: "data_solicitacao", ordem: "desc" },
   intervalo: ["de", "ate"],
   filtros: {
-    status: { tipo: "enum", coluna: "utilizacao.status", valores: ["PENDENTE", "APROVADA", "REPROVADA", "ESTORNADA", "EXPIRADA", "CANCELADA"] },
+    status: {
+      tipo: "enum",
+      valores: ["PENDENTE", "APROVADA", "REPROVADA", "ESTORNADA", "EXPIRADA", "CANCELADA"],
+      aplicar(query, valor) {
+        const momento = agora();
+        if (valor === "PENDENTE") {
+          query.where("utilizacao.status", "PENDENTE").where("utilizacao.data_expiracao", ">", momento);
+        } else if (valor === "EXPIRADA") {
+          query.where(function () {
+            this.where("utilizacao.status", "EXPIRADA").orWhere(function () {
+              this.where("utilizacao.status", "PENDENTE").where("utilizacao.data_expiracao", "<=", momento);
+            });
+          });
+        } else {
+          query.where("utilizacao.status", valor);
+        }
+      },
+    },
     de: { tipo: "data", coluna: "utilizacao.data_solicitacao", operador: ">=", dataHora: true },
     ate: { tipo: "data", coluna: "utilizacao.data_solicitacao", operador: "<=", dataHora: true },
   },
