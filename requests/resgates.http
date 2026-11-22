@@ -1,0 +1,116 @@
+@api = http://localhost:3333/api/v1
+
+###
+# @name loginColaborador
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "diego@fcv.org.br",
+  "senha": "123456"
+}
+
+###
+@colaborador = {{loginColaborador.response.body.$.token}}
+
+###
+# @name loginFarmacia
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "farmacia@parceiro.com",
+  "senha": "123456"
+}
+
+###
+@farmacia = {{loginFarmacia.response.body.$.token}}
+
+###
+# @name loginAcademia
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "academia@parceiro.com",
+  "senha": "123456"
+}
+
+###
+@academia = {{loginAcademia.response.body.$.token}}
+
+###
+# @name solicitar
+POST {{api}}/resgates
+Authorization: Bearer {{colaborador}}
+Content-Type: application/json
+
+{
+  "beneficio_id": 1
+}
+
+###
+@resgateId = {{solicitar.response.body.$.id}}
+@codigo = {{solicitar.response.body.$.codigo_validacao}}
+@token = {{solicitar.response.body.$.token_qrcode}}
+
+###
+POST {{api}}/resgates
+Authorization: Bearer {{colaborador}}
+Content-Type: application/json
+
+{
+  "beneficio_id": 1
+}
+
+###
+GET {{api}}/resgates/{{resgateId}}
+Authorization: Bearer {{colaborador}}
+
+###
+GET {{api}}/eu/aguardando
+Authorization: Bearer {{colaborador}}
+
+###
+GET {{api}}/validacao/{{codigo}}
+Authorization: Bearer {{academia}}
+
+###
+GET {{api}}/validacao/{{token}}
+Authorization: Bearer {{farmacia}}
+
+###
+POST {{api}}/validacao/{{codigo}}/aprovar
+Authorization: Bearer {{farmacia}}
+Content-Type: application/json
+
+{
+  "canal_validacao": "APP_CONVENIADO"
+}
+
+###
+POST {{api}}/validacao/{{codigo}}/aprovar
+Authorization: Bearer {{farmacia}}
+
+###
+GET {{api}}/validacao/FCV006
+Authorization: Bearer {{academia}}
+
+###
+GET {{api}}/eu/utilizacoes
+Authorization: Bearer {{farmacia}}
+
+###
+# @name outro
+POST {{api}}/resgates
+Authorization: Bearer {{colaborador}}
+Content-Type: application/json
+
+{
+  "beneficio_id": 2
+}
+
+###
+POST {{api}}/resgates/{{outro.response.body.$.id}}/cancelar
+Authorization: Bearer {{colaborador}}
+
