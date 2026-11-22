@@ -137,6 +137,7 @@ Todos com a senha **`123456`**.
 | `fabio@fcv.org.br` | COLABORADOR | **Inativo**: serve para testar o login recusado |
 | `farmacia@parceiro.com`, `academia@parceiro.com` | CONVENIADO | Estabelecimentos parceiros |
 | `otica@parceiro.com` | CONVENIADO | **Em análise**: o login é recusado |
+| `drogaria@`, `restaurante@`, `cinema@`, `pilates@parceiro.com` | CONVENIADO | Mais locais para a apresentação (farmácia, alimentação, cultura e lazer, pilates) |
 
 ---
 
