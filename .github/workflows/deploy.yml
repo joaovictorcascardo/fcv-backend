@@ -1,0 +1,83 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx tsc -p tsconfig.json
+
+      - name: Monta a pasta de deploy
+        run: |
+          mkdir saida
+          cp -r dist saida/dist
+          node -e '
+            const p = require("./package.json");
+            delete p.devDependencies;
+            p.scripts = { start: "node iniciar.js" };
+            p.main = "iniciar.js";
+            require("fs").writeFileSync("saida/package.json", JSON.stringify(p, null, 2));
+          '
+          cat > saida/iniciar.js <<'JS'
+          require("dotenv/config");
+          const path = require("path");
+          const knex = require("knex");
+
+          if (process.env.PORT && !process.env.PORTA) process.env.PORTA = process.env.PORT;
+
+          const banco = knex({
+            client: "mysql2",
+            connection: {
+              host: process.env.DB_HOST,
+              port: Number(process.env.DB_PORTA) || 3306,
+              user: process.env.DB_USUARIO,
+              password: process.env.DB_SENHA,
+              database: process.env.DB_NOME,
+              dateStrings: true,
+              decimalNumbers: true,
+            },
+            migrations: { directory: path.join(__dirname, "dist/src/database/migrations"), loadExtensions: [".js"] },
+            seeds: { directory: path.join(__dirname, "dist/src/database/seeds"), loadExtensions: [".js"] },
+          });
+
+          async function preparar() {
+            await banco.migrate.latest();
+            const [{ total }] = await banco("usuario").count({ total: "*" });
+            if (Number(total) === 0) await banco.seed.run();
+          }
+
+          preparar()
+            .catch((erro) => console.error("Falha ao preparar o banco:", erro))
+            .finally(() => banco.destroy())
+            .then(() => require("./dist/src/server.js"));
+          JS
+
+      - name: Envia para a branch deploy
+        run: |
+          cd saida
+          git init -q -b deploy
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -qm "deploy: ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" deploy
