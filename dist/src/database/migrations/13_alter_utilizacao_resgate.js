@@ -10,7 +10,7 @@ function codigoAleatorio() {
     return codigo;
 }
 async function up(knex) {
-    await knex.raw("ALTER TABLE utilizacao DROP CHECK ck_utilizacao_origem");
+    await knex.raw("ALTER TABLE utilizacao DROP CONSTRAINT ck_utilizacao_origem");
     await knex.schema.alterTable("utilizacao", (t) => {
         t.integer("beneficio_id").unsigned().nullable().references("id").inTable("beneficio").after("colaborador_id");
         t.string("codigo_validacao", 6).nullable().after("token_qrcode");
@@ -56,9 +56,9 @@ async function up(knex) {
 async function down(knex) {
     await knex.raw(`
     ALTER TABLE utilizacao
-      DROP CHECK ck_utilizacao_uma_oferta,
-      DROP CHECK ck_utilizacao_origem,
-      DROP CHECK ck_utilizacao_local_validado,
+      DROP CONSTRAINT ck_utilizacao_uma_oferta,
+      DROP CONSTRAINT ck_utilizacao_origem,
+      DROP CONSTRAINT ck_utilizacao_local_validado,
       DROP INDEX utilizacao_codigo_validacao_unique,
       DROP INDEX utilizacao_status_data_expiracao_index
   `);
