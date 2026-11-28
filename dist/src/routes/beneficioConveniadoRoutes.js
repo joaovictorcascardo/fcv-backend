@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const permitir_1 = require("../middlewares/permitir");
+const beneficioConveniadoController_1 = require("../controllers/beneficioConveniadoController");
+const router = (0, express_1.Router)();
+router.get("/", beneficioConveniadoController_1.beneficioConveniadoController.listar);
+router.get("/:id", beneficioConveniadoController_1.beneficioConveniadoController.buscar);
+router.post("/", (0, permitir_1.permitir)("FCV"), beneficioConveniadoController_1.beneficioConveniadoController.criar);
+router.put("/:id", (0, permitir_1.permitir)("FCV"), beneficioConveniadoController_1.beneficioConveniadoController.atualizar);
+router.delete("/:id", (0, permitir_1.permitir)("FCV"), beneficioConveniadoController_1.beneficioConveniadoController.excluir);
+exports.default = router;

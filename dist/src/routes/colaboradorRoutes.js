@@ -1,0 +1,11 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const colaboradorController_1 = require("../controllers/colaboradorController");
+const router = (0, express_1.Router)();
+router.get("/", colaboradorController_1.colaboradorController.listar);
+router.get("/:id", colaboradorController_1.colaboradorController.buscar);
+router.post("/", colaboradorController_1.colaboradorController.criar);
+router.put("/:id", colaboradorController_1.colaboradorController.atualizar);
+router.delete("/:id", colaboradorController_1.colaboradorController.excluir);
+exports.default = router;

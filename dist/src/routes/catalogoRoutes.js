@@ -1,0 +1,11 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const catalogoController_1 = require("../controllers/catalogoController");
+const router = (0, express_1.Router)();
+router.get("/resumo", catalogoController_1.catalogoController.resumo);
+router.get("/beneficios", catalogoController_1.catalogoController.beneficios);
+router.get("/beneficios/:id", catalogoController_1.catalogoController.beneficio);
+router.get("/locais", catalogoController_1.catalogoController.locais);
+router.get("/locais/:id", catalogoController_1.catalogoController.local);
+exports.default = router;
